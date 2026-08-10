@@ -23,3 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 public/katalog/*.pdf
+
+# Claude Code local settings
+.claude/settings.local.json
