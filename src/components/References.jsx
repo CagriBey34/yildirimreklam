@@ -154,7 +154,7 @@ export default function References() {
   usePinnedPanel(panelRef, { innerRef });
 
   return (
-    <section ref={panelRef} id="referanslarimiz" className="min-h-screen flex flex-col items-center justify-center py-24 bg-[#F8F8F8]">
+    <section ref={panelRef} id="referanslarimiz" className="min-h-dvh flex flex-col items-center justify-center py-24 bg-[#F8F8F8]">
       <div ref={innerRef} className="max-w-6xl w-full mx-auto px-4 sm:px-6">
         {/* Header */}
         <div className="text-center mb-16">

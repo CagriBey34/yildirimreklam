@@ -43,7 +43,7 @@ export default function Catalogs() {
     <section
       ref={panelRef}
       id="kataloglarimiz"
-      className="min-h-screen flex flex-col items-center justify-center px-5 sm:px-8 py-24 bg-[#0D0D0D]"
+      className="min-h-dvh flex flex-col items-center justify-center px-5 sm:px-8 py-24 bg-[#0D0D0D]"
     >
       <div ref={innerRef} className="w-full flex flex-col items-center">
         <div className="max-w-2xl mx-auto text-center mb-14 sm:mb-20">

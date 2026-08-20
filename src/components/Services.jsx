@@ -632,6 +632,8 @@ function CTAStage({ opacity }) {
 // Quick-jump "Teklif Al" pill, pinned to the corner of the card itself
 // (never the viewport) — only meaningful while browsing services or the
 // process timeline, where there's no other call-to-action on screen yet.
+// Positioned at the bottom-right corner; the site-wide WhatsAppButton is
+// fixed at the bottom-left corner on every screen, so the two never overlap.
 function FloatingOfferButton({ visible }) {
   return (
     // Wrapper owns the show/hide slide (a Tailwind translate-y utility —
@@ -639,7 +641,7 @@ function FloatingOfferButton({ visible }) {
     // btn-neu's own transform on the same element); the inner <a> owns its
     // independent hover tilt via btn-neu.
     <div
-      className={`absolute bottom-5 right-5 sm:bottom-8 sm:right-8 z-40 transition-all duration-300 ${
+      className={`absolute bottom-24 right-5 sm:bottom-28 sm:right-8 z-40 transition-all duration-300 ${
         visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3 pointer-events-none"
       }`}
     >
@@ -721,7 +723,7 @@ export default function Services() {
     <section
       ref={panelRef}
       id="hizmetlerimiz"
-      className="relative h-screen pt-20 sm:pt-24 overflow-hidden bg-[#0D0D0D] flex items-center justify-center"
+      className="relative h-dvh pt-20 sm:pt-24 overflow-hidden bg-[#0D0D0D] flex items-center justify-center"
     >
       {/* Conic-gradient backdrop — purely decorative, never intercepts input */}
       <div className="services-depth-bg pointer-events-none" />

@@ -4,6 +4,28 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 gsap.registerPlugin(ScrollTrigger);
 
+// Mobile browsers show/hide their address bar while scrolling, which fires a
+// `resize` event on every hide/show. ScrollTrigger's default reaction is to
+// re-measure and refresh every pin's start/end mid-gesture — recalculating a
+// pin while the user is actively scrolled into it is what produced the
+// "sections suddenly jump/overlap" and "scroll feels too fast" reports on
+// mobile: a panel's pin boundaries would shift under the user's thumb.
+ScrollTrigger.config({ ignoreMobileResize: true });
+
+// Panel heights (and therefore pin distances) are measured from the DOM the
+// instant each panel mounts. The webfonts (Manrope/Dancing Script) load
+// async and swap in after that first measurement, reflowing text height —
+// on a panel with several lines of copy (Hero, About's reasons) that swap
+// can leave the pin distance measured against the fallback font's shorter
+// layout, so it ends a beat early and the next panel starts sliding in
+// before this one has finished — one more source of the "overlap" reports.
+// Re-measuring once fonts (and any late-loading images) have actually
+// settled corrects it.
+if (typeof window !== "undefined") {
+  window.addEventListener("load", () => ScrollTrigger.refresh());
+  document.fonts?.ready?.then(() => ScrollTrigger.refresh());
+}
+
 // Pins a section while the user scrolls through it, then shrinks + fades it
 // out as the next section takes over — the same "stacked panels" pattern as
 // the reference implementation (pin, optionally fake-scroll through content
@@ -49,7 +71,13 @@ export function usePinnedPanel(panelRef, { innerRef, virtualExtraVh, onProgress,
           end: () => (fakeScrollRatio ? `+=${contentHeight}` : "bottom top"),
           pin: true,
           pinSpacing: false,
-          scrub: true,
+          // A numeric scrub (seconds of smoothing) instead of `true` lets the
+          // shrink/fade/translate tween ease toward the scroll position
+          // rather than snapping to it every frame — on mobile, a single
+          // touch fling can cover a huge scroll distance in one frame, so an
+          // unsmoothed scrub made the whole sequence appear to blast past in
+          // an instant.
+          scrub: 0.4,
         },
       });
 

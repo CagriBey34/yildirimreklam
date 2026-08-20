@@ -145,7 +145,7 @@ export default function Hero() {
     <section
       id="anasayfa"
       ref={heroRef}
-      className="relative min-h-screen flex flex-col overflow-hidden bg-[#1A1A1A]"
+      className="relative min-h-dvh flex flex-col overflow-hidden bg-[#1A1A1A]"
     >
       {/* Background: an illuminated sign the agency itself produced (a nod
           to the craft, not a stock photo), graded to sit inside the site's
@@ -220,7 +220,7 @@ export default function Hero() {
           continuous sequence rather than each block fading in separately —
           the giant wordmark anchored to (and bleeding past) the very
           bottom edge. */}
-      <div ref={contentRef} className="relative z-10 flex flex-col min-h-screen w-full">
+      <div ref={contentRef} className="relative z-10 flex flex-col min-h-dvh w-full">
         <div className="flex-1 flex flex-col items-start justify-start text-left px-4 sm:px-6 lg:px-12 pt-28 sm:pt-32 pb-4">
           <div className="max-w-xl">
             <h1 className="font-display text-2xl sm:text-3xl md:text-4xl font-black text-white leading-[1.15] mb-5">
