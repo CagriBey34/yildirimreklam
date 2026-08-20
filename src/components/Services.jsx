@@ -142,25 +142,60 @@ function ArrowIcon({ className }) {
   );
 }
 
+// Same "keep scrolling" chevron cue used at the bottom of the Hero and
+// "Neden Biz?" screens — pinned to the very bottom of the stage, independent
+// of wherever that stage's own text happens to sit, so it reads as a
+// section-wide cue rather than part of the copy above it.
+function ScrollHintChevrons({ opacity }) {
+  return (
+    <div
+      className="absolute inset-x-0 bottom-6 sm:bottom-8 flex flex-col items-center pointer-events-none"
+      style={{ opacity }}
+      aria-hidden="true"
+    >
+      {[0, 1, 2].map((i) => (
+        <svg
+          key={i}
+          viewBox="0 0 24 12"
+          className="w-6 sm:w-7 md:w-8 scroll-chevron"
+          style={{ marginTop: i === 0 ? 0 : "-0.4em", animationDelay: `${i * 0.6}s` }}
+        >
+          <path
+            d="M2 10L12 2L22 10"
+            fill="none"
+            stroke="#F5A623"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      ))}
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Stage 1: Hero intro
 // ---------------------------------------------------------------------------
 function HeroStage({ opacity }) {
   return (
-    <div className="absolute inset-0 flex items-center justify-center px-5 sm:px-8" style={{ opacity }}>
-      <div className="max-w-3xl mx-auto text-center services-hero-reveal">
-        <span className="inline-block text-[#F5A623] text-xs sm:text-sm font-bold tracking-[0.25em] uppercase mb-5">
-          Hizmetlerimiz
-        </span>
-        <h2 className="font-display text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-white leading-[1.15] mb-6">
-          Markanızı <span className="text-[#F5A623]">görünür kılan</span> üretimler gerçekleştiriyoruz.
-        </h2>
-        <p className="text-white/60 text-base sm:text-lg leading-relaxed max-w-xl mx-auto">
-          Fikirden üretime, uygulamadan montaja kadar markanızın fiziksel dünyadaki tüm
-          görünürlük ihtiyaçlarını profesyonel çözümlerle hayata geçiriyoruz.
-        </p>
+    <>
+      <div className="absolute inset-0 flex items-center justify-center px-5 sm:px-8" style={{ opacity }}>
+        <div className="max-w-3xl mx-auto text-center services-hero-reveal">
+          <span className="inline-block text-[#F5A623] text-xs sm:text-sm font-bold tracking-[0.25em] uppercase mb-5">
+            Hizmetlerimiz
+          </span>
+          <h2 className="font-display text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-white leading-[1.15] mb-6">
+            Markanızı <span className="text-[#F5A623]">görünür kılan</span> üretimler gerçekleştiriyoruz.
+          </h2>
+          <p className="text-white/60 text-base sm:text-lg leading-relaxed max-w-xl mx-auto">
+            Fikirden üretime, uygulamadan montaja kadar markanızın fiziksel dünyadaki tüm
+            görünürlük ihtiyaçlarını profesyonel çözümlerle hayata geçiriyoruz.
+          </p>
+        </div>
       </div>
-    </div>
+      <ScrollHintChevrons opacity={opacity} />
+    </>
   );
 }
 
@@ -274,12 +309,12 @@ function ServiceGroupPanel({ group, isCurrentGroup, dwellLocal, activeItemIndex,
   const effectiveIndex = isMobile ? scrollItemIndex : activeItemIndex;
   const activeItem = items[effectiveIndex];
 
-  // Mobile crossfade: each image holds at full opacity for most of its own
-  // slot, then crossfades into the next one only across the final stretch
-  // (see the equivalent note this used to carry before items were tap-driven
-  // on desktop) — still purely a function of scroll position, no timer.
-  const CROSSFADE_START = 0.65;
-  const crossfadeT = clamp((itemRowProgress - CROSSFADE_START) / (1 - CROSSFADE_START), 0, 1);
+  // Mobile crossfade: the image blends continuously into the next one across
+  // its *entire* slot (no held/static stretch) so any amount of scrolling —
+  // forward or backward — always reads as a slow, ongoing flow between
+  // photos rather than a static hold followed by an abrupt snap at the end.
+  // Still purely a function of scroll position, no timer.
+  const crossfadeT = itemRowProgress;
   const visualOpacity = (i) => {
     if (!isMobile) return i === effectiveIndex ? 1 : 0;
     if (i === scrollItemIndex) return 1 - crossfadeT;
@@ -601,31 +636,34 @@ function Timeline({ localProgress }) {
 // ---------------------------------------------------------------------------
 function CTAStage({ opacity }) {
   return (
-    <div className="absolute inset-0 flex items-center justify-center px-5 sm:px-8" style={{ opacity }}>
-      <div className="max-w-2xl mx-auto text-center">
-        <h3 className="font-display text-3xl sm:text-4xl md:text-5xl font-black text-white leading-tight mb-5">
-          Markanızı daha <span className="text-[#F5A623]">görünür</span> hâle getirelim.
-        </h3>
-        <p className="text-white/60 text-base sm:text-lg leading-relaxed max-w-xl mx-auto mb-9">
-          Projenizi anlatın, ihtiyacınıza özel tasarım ve üretim çözümünü birlikte oluşturalım.
-        </p>
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <a
-            href="#iletisim"
-            className="group btn-neu w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#F5A623] hover:bg-white text-[#0D0D0D] font-bold text-sm sm:text-base px-7 py-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#0D0D0D]"
-          >
-            Teklif Al
-            <ArrowIcon className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
-          </a>
-          <a
-            href="#referanslarimiz"
-            className="btn-neu w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#F8F8F8] hover:bg-white text-[#1A1A1A] font-bold text-sm sm:text-base px-7 py-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#0D0D0D]"
-          >
-            Projelerimizi İncele
-          </a>
+    <>
+      <div className="absolute inset-0 flex items-center justify-center px-5 sm:px-8" style={{ opacity }}>
+        <div className="max-w-2xl mx-auto text-center">
+          <h3 className="font-display text-3xl sm:text-4xl md:text-5xl font-black text-white leading-tight mb-5">
+            Markanızı daha <span className="text-[#F5A623]">görünür</span> hâle getirelim.
+          </h3>
+          <p className="text-white/60 text-base sm:text-lg leading-relaxed max-w-xl mx-auto mb-9">
+            Projenizi anlatın, ihtiyacınıza özel tasarım ve üretim çözümünü birlikte oluşturalım.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <a
+              href="#iletisim"
+              className="group btn-neu w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#F5A623] hover:bg-white text-[#0D0D0D] font-bold text-sm sm:text-base px-7 py-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#0D0D0D]"
+            >
+              Teklif Al
+              <ArrowIcon className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
+            </a>
+            <a
+              href="#referanslarimiz"
+              className="btn-neu w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#F8F8F8] hover:bg-white text-[#1A1A1A] font-bold text-sm sm:text-base px-7 py-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#0D0D0D]"
+            >
+              Projelerimizi İncele
+            </a>
+          </div>
         </div>
       </div>
-    </div>
+      <ScrollHintChevrons opacity={opacity} />
+    </>
   );
 }
 

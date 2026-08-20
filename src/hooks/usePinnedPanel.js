@@ -78,6 +78,17 @@ export function usePinnedPanel(panelRef, { innerRef, virtualExtraVh, onProgress,
           // unsmoothed scrub made the whole sequence appear to blast past in
           // an instant.
           scrub: 0.4,
+          // Both address the same "blast past" glitch as `scrub` above, just
+          // at the pin boundary itself rather than mid-animation: a fast
+          // mobile fling (especially scrolling back up through several
+          // stacked panels at once) can jump past a pin's start/end between
+          // one scroll event and the next. anticipatePin has ScrollTrigger
+          // engage a pin slightly before its exact trigger point instead of
+          // waiting for an exact match; fastScrollEnd snaps straight to a
+          // pin's resolved state on a high-velocity flick instead of trying
+          // to animate through every intermediate frame.
+          anticipatePin: 1,
+          fastScrollEnd: true,
         },
       });
 

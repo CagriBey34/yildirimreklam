@@ -298,6 +298,32 @@ export default function Hero() {
          
         </div>
       </div>
+
+      {/* Scroll hint chevrons, pinned to the very bottom of the screen —
+          same cue used at the bottom of the "Neden Biz?" section — so the
+          intro screen also signals there's more to scroll to. */}
+      <div
+        className="absolute inset-x-0 bottom-6 sm:bottom-8 z-10 flex flex-col items-center pointer-events-none"
+        aria-hidden="true"
+      >
+        {[0, 1, 2].map((i) => (
+          <svg
+            key={i}
+            viewBox="0 0 24 12"
+            className="w-6 sm:w-7 md:w-8 scroll-chevron"
+            style={{ marginTop: i === 0 ? 0 : "-0.4em", animationDelay: `${i * 0.6}s` }}
+          >
+            <path
+              d="M2 10L12 2L22 10"
+              fill="none"
+              stroke="#F5A623"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        ))}
+      </div>
     </section>
   );
 }

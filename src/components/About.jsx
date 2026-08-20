@@ -102,32 +102,39 @@ export default function About() {
     >
       {/* "Neden Biz?" full-screen blinking headline */}
       <div
-        className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none px-4"
+        className="absolute inset-0 flex items-center justify-center pointer-events-none px-4"
         style={{ opacity: introOpacity }}
       >
         <h2 className="font-display blink-text text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-black text-[#1A1A1A] text-center tracking-tight">
           Neden <span className="text-[#F5A623]">Biz?</span>
         </h2>
+      </div>
 
-        <div className="mt-8 sm:mt-10 md:mt-12 flex flex-col items-center" aria-hidden="true">
-          {[0, 1, 2].map((i) => (
-            <svg
-              key={i}
-              viewBox="0 0 24 12"
-              className="w-6 sm:w-7 md:w-8 scroll-chevron"
-              style={{ marginTop: i === 0 ? 0 : "-0.4em", animationDelay: `${i * 0.6}s` }}
-            >
-              <path
-                d="M2 10L12 2L22 10"
-                fill="none"
-                stroke="#F5A623"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          ))}
-        </div>
+      {/* Scroll hint chevrons — pinned to the very bottom of the screen
+          (not tied to the headline's own centering) so they read as a
+          section-wide "keep scrolling" cue rather than part of the title. */}
+      <div
+        className="absolute inset-x-0 bottom-6 sm:bottom-8 flex flex-col items-center pointer-events-none"
+        style={{ opacity: introOpacity }}
+        aria-hidden="true"
+      >
+        {[0, 1, 2].map((i) => (
+          <svg
+            key={i}
+            viewBox="0 0 24 12"
+            className="w-6 sm:w-7 md:w-8 scroll-chevron"
+            style={{ marginTop: i === 0 ? 0 : "-0.4em", animationDelay: `${i * 0.6}s` }}
+          >
+            <path
+              d="M2 10L12 2L22 10"
+              fill="none"
+              stroke="#F5A623"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        ))}
       </div>
 
       {/* Reasons: title + description on the left, a giant semi-transparent

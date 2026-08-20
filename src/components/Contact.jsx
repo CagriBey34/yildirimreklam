@@ -59,7 +59,7 @@ function PinIcon({ className }) {
 
 const infoCards = [
   { label: "Telefon", value: "0532 445 79 97", href: "tel:05324457997", Icon: PhoneIcon },
-  { label: "E-posta", value: "info@yildirim-reklam.com", href: "mailto:info@yildirim-reklam.com", Icon: MailIcon },
+  { label: "E-posta", value: "info@yildirimreklam.tr", href: "mailto:info@yildirimreklam.tr", Icon: MailIcon },
   { label: "Çalışma Saatleri", value: "Pzt–Cmt: 08:00 – 18:00", Icon: ClockIcon },
 ];
 
