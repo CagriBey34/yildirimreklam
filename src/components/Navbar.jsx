@@ -261,7 +261,7 @@ export default function Navbar() {
         {/* Mobile-only bar: logo + hamburger trigger for the full-screen menu
             above. Desktop navigation lives entirely in WheelNav now. */}
         <nav
-          className={`relative z-10 w-full max-w-5xl transition-all duration-300 rounded-tl-[2.5rem] rounded-tr-lg rounded-br-[2.5rem] rounded-bl-lg px-5 sm:px-7 py-2 sm:py-2.5 flex items-center justify-between ring-1 border-b-2 border-[#F5A623]/70 ${
+          className={`relative z-10 w-full max-w-5xl transition-all duration-300 px-5 sm:px-7 py-2 sm:py-2.5 flex items-center justify-between ring-1 border-b-2 border-[#F5A623]/70 ${
             scrolled
               ? "bg-[#1A1A1A]/95 backdrop-blur-md ring-white/10 shadow-xl shadow-black/30"
               : "bg-[#1A1A1A]/70 backdrop-blur-md ring-white/5"
@@ -283,7 +283,7 @@ export default function Navbar() {
           {/* Mobile menu toggle */}
           <button
             onClick={() => setMenuOpen((v) => !v)}
-            className="relative z-10 flex flex-col justify-center items-center w-9 h-9 gap-1.5 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+            className="relative z-10 flex flex-col justify-center items-center w-9 h-9 gap-1.5 bg-white/10 hover:bg-white/20 transition-colors"
             aria-label={menuOpen ? "Menüyü kapat" : "Menüyü aç"}
             aria-expanded={menuOpen}
           >

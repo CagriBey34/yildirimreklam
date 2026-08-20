@@ -33,14 +33,11 @@ export default function App() {
         <Catalogs />
         <References />
 
-        {/* Contact and Footer share a single card instead of stacking as two
-            separate panels — Footer sits directly beneath Contact's content
-            inside the same box. Being the last section, it isn't pinned at
-            all: it just settles into place once References has faded away. */}
-        <div className="mx-3 sm:mx-6 rounded-t-[2rem] sm:rounded-t-[2.5rem] overflow-hidden shadow-[0_-20px_60px_rgba(0,0,0,0.35)]">
-          <Contact />
-          <Footer />
-        </div>
+        {/* Being the last section, Contact (with Footer directly beneath it)
+            isn't pinned at all: it just settles into place once References
+            has faded away. */}
+        <Contact />
+        <Footer />
       </div>
 
       {/* Rendered after the sections (not before): Navbar's own layout

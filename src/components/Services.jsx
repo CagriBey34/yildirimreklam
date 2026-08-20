@@ -222,25 +222,27 @@ function ServiceGroupRow({ number, title, isActive, interactive, onSelect, showT
 function TapHint({ className = "" }) {
   return (
     <span className={`pointer-events-none inline-flex ${className}`} aria-hidden="true">
-      <span className="absolute inset-0 rounded-full bg-[#F5A623] opacity-75 animate-ping" />
-      <span className="relative inline-flex w-full h-full rounded-full bg-[#F5A623]" />
+      <span className="absolute inset-0 bg-[#F5A623] opacity-75 animate-ping" />
+      <span className="relative inline-flex w-full h-full bg-[#F5A623]" />
     </span>
   );
 }
 
 // A single item's photo, stacked with its siblings and crossfaded in/out —
 // all of a group's item images are always mounted so switching the active
-// one is a pure opacity/scale change, never a swap that could flash. Active
-// state is now a discrete tap/click, not a continuous scroll value, so a
-// single short eased transition handles every swap.
-function ServiceItemVisual({ image, label, isActive }) {
+// one is a pure opacity/scale change, never a swap that could flash.
+// `opacity` is continuous on mobile (the crossfade tracks the swipe/scroll
+// position frame by frame — `instant` drops the CSS transition there so it
+// never chases a target that's already moving) and binary on desktop (a
+// discrete tap, so it keeps a short eased transition instead).
+function ServiceItemVisual({ image, label, opacity, instant }) {
   return (
     <img
       src={image}
       alt={`${label} uygulama örneği`}
-      aria-hidden={isActive ? undefined : true}
-      className="absolute inset-0 w-full h-full object-cover transition-all duration-500 ease-out"
-      style={{ opacity: isActive ? 1 : 0, transform: `scale(${isActive ? 1 : 1.06})` }}
+      aria-hidden={opacity > 0.5 ? undefined : true}
+      className={`absolute inset-0 w-full h-full object-cover ${instant ? "" : "transition-all duration-500 ease-out"}`}
+      style={{ opacity, transform: `scale(${1.06 - opacity * 0.06})` }}
     />
   );
 }
@@ -250,12 +252,40 @@ function ServiceItemVisual({ image, label, isActive }) {
 // `isCurrentGroup` is true only while the pan is dwelling on this exact
 // group — everywhere else its list is present (so the pan has something to
 // slide) but inert (not focusable/hoverable/tappable) and frozen on the
-// first item. `activeItemIndex`/`onSelectItem` are owned by the parent
-// stage: tapping a row or dot is the only thing that ever changes which
-// item is active — scroll only drives which *group* is on screen.
-function ServiceGroupPanel({ group, isCurrentGroup, activeItemIndex, onSelectItem, showTapHint }) {
+// first item.
+//
+// Two interaction modes, chosen by `isMobile`:
+// - Desktop: `activeItemIndex`/`onSelectItem` (owned by the parent stage)
+//   drive everything — tapping a row is the only thing that changes which
+//   item is shown, scroll only drives which *group* is on screen.
+// - Mobile: items still cascade by scroll/swipe, exactly like the original
+//   design — `dwellLocal` (this group's own scroll position within its
+//   dwell phase) drives a continuous crossfade through the items, and the
+//   dots below are a passive progress indicator, not a control.
+const GROUP_REVEAL_FRACTION = 0.8;
+
+function ServiceGroupPanel({ group, isCurrentGroup, dwellLocal, activeItemIndex, onSelectItem, showTapHint, isMobile }) {
   const items = group.items;
-  const activeItem = items[activeItemIndex];
+
+  const rawItemPos = Math.min(dwellLocal / GROUP_REVEAL_FRACTION, 1) * items.length;
+  const scrollItemIndex = clamp(Math.floor(rawItemPos), 0, items.length - 1);
+  const itemRowProgress = clamp(rawItemPos - scrollItemIndex, 0, 1);
+
+  const effectiveIndex = isMobile ? scrollItemIndex : activeItemIndex;
+  const activeItem = items[effectiveIndex];
+
+  // Mobile crossfade: each image holds at full opacity for most of its own
+  // slot, then crossfades into the next one only across the final stretch
+  // (see the equivalent note this used to carry before items were tap-driven
+  // on desktop) — still purely a function of scroll position, no timer.
+  const CROSSFADE_START = 0.65;
+  const crossfadeT = clamp((itemRowProgress - CROSSFADE_START) / (1 - CROSSFADE_START), 0, 1);
+  const visualOpacity = (i) => {
+    if (!isMobile) return i === effectiveIndex ? 1 : 0;
+    if (i === scrollItemIndex) return 1 - crossfadeT;
+    if (i === scrollItemIndex + 1) return crossfadeT;
+    return 0;
+  };
 
   return (
     <div className="w-full h-full flex items-center px-5 sm:px-8 md:px-10 lg:px-16">
@@ -275,7 +305,7 @@ function ServiceGroupPanel({ group, isCurrentGroup, activeItemIndex, onSelectIte
                 key={item.label}
                 number={`0${i + 1}`}
                 title={item.label}
-                isActive={i === activeItemIndex}
+                isActive={i === effectiveIndex}
                 interactive={isCurrentGroup}
                 onSelect={() => onSelectItem(i)}
                 showTapHint={showTapHint && i === 0}
@@ -283,25 +313,15 @@ function ServiceGroupPanel({ group, isCurrentGroup, activeItemIndex, onSelectIte
             ))}
           </div>
 
-          {/* Mobile: tappable dots instead of the full list */}
-          <div className="flex md:hidden items-center gap-3 mt-2">
+          {/* Mobile: passive progress dots, driven by scroll like before */}
+          <div className="flex md:hidden items-center gap-2 mt-2" aria-hidden="true">
             {items.map((item, i) => (
-              <button
+              <span
                 key={item.label}
-                type="button"
-                tabIndex={isCurrentGroup ? 0 : -1}
-                onClick={isCurrentGroup ? () => onSelectItem(i) : undefined}
-                aria-label={item.label}
-                aria-current={i === activeItemIndex ? "true" : undefined}
-                className={`relative p-2 -m-2 ${isCurrentGroup ? "" : "pointer-events-none"}`}
-              >
-                <span
-                  className={`block h-1.5 rounded-full transition-all duration-300 ${
-                    i === activeItemIndex ? "w-6 bg-[#F5A623]" : "w-1.5 bg-white/25"
-                  }`}
-                />
-                {showTapHint && i === 0 && <TapHint className="absolute -top-0.5 -right-0.5 w-2 h-2" />}
-              </button>
+                className={`h-1.5 transition-all duration-300 ${
+                  i === effectiveIndex ? "w-6 bg-[#F5A623]" : "w-1.5 bg-white/25"
+                }`}
+              />
             ))}
           </div>
         </div>
@@ -313,13 +333,14 @@ function ServiceGroupPanel({ group, isCurrentGroup, activeItemIndex, onSelectIte
                 key={item.label}
                 image={item.image}
                 label={item.label}
-                isActive={i === activeItemIndex}
+                opacity={visualOpacity(i)}
+                instant={isMobile}
               />
             ))}
             <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/5 to-transparent pointer-events-none" />
             <div className="absolute bottom-0 left-0 p-6 sm:p-8">
               <div className="font-display font-black text-3xl sm:text-4xl text-[#F5A623] mb-1.5">
-                0{activeItemIndex + 1}
+                0{effectiveIndex + 1}
               </div>
               <p className="text-white/85 text-sm sm:text-base">{activeItem.label}</p>
             </div>
@@ -332,13 +353,29 @@ function ServiceGroupPanel({ group, isCurrentGroup, activeItemIndex, onSelectIte
 
 // Seven phases inside the groups stage: dwell on group 0, pan right, dwell
 // on group 1, pan down, dwell on group 2, pan left, dwell on group 3. Each
-// group's own dwell phase sits at phaseIndex `groupIndex * 2`. Dwell phases
-// no longer need to be sized for a scroll-driven item cascade (items are
-// tap-driven now — see ServiceGroupPanel) — they just need to be a
-// deliberate-enough scroll distance that a single wheel tick doesn't blow
-// straight through a group without the user noticing they arrived. Equal
-// weights keep this simple: every dwell and every pan gets the same share.
-const GROUP_PHASE_WEIGHTS = [1, 1, 1, 1, 1, 1, 1];
+// group's own dwell phase sits at phaseIndex `groupIndex * 2`.
+//
+// On desktop, items are tapped rather than scrolled to, so dwell only needs
+// to be a deliberate-enough scroll distance that a stray wheel tick doesn't
+// blow straight through a group unnoticed — equal weights keep that simple.
+// On mobile, items still cascade by swipe like the original design, so each
+// dwell needs real scroll room to move through every item — weighted much
+// heavier than the pans between groups, same ratio as the original tuning.
+const DESKTOP_GROUP_PHASE_WEIGHTS = [1, 1, 1, 1, 1, 1, 1];
+const MOBILE_GROUP_PHASE_WEIGHTS = [1.3, 0.4, 1.3, 0.4, 1.3, 0.4, 1.3];
+
+// A group's item-list progress: 0 before its dwell phase has started (still
+// shows the first item), phaseLocal while it's the one being dwelled on,
+// and 1 once scroll has moved past it — frozen on its *last* item rather
+// than snapping back to the first, which is what caused items to visibly
+// jump backwards for a frame while a group was sliding off-screen. Only
+// meaningful on mobile (desktop items are tap-driven), but cheap enough to
+// always compute.
+function groupDwellLocal(groupIndex, phaseIndex, phaseLocal) {
+  const ownPhase = groupIndex * 2;
+  if (phaseIndex === ownPhase) return phaseLocal;
+  return phaseIndex > ownPhase ? 1 : 0;
+}
 
 // Transit phases ease their own progress so the pan accelerates/decelerates
 // smoothly instead of moving at a harsh, constant rate. The canvas transform
@@ -377,12 +414,13 @@ function initialViewportSize() {
   return { width: window.innerWidth, height: window.innerHeight };
 }
 
-function ServiceGroupsStage({ segmentLocal, opacity }) {
+function ServiceGroupsStage({ segmentLocal, opacity, isMobile }) {
   const viewportRef = useRef(null);
   const [size, setSize] = useState(initialViewportSize);
   const [activeItemIndex, setActiveItemIndex] = useState(0);
   // Whether the user has ever tapped an item, anywhere — once true, the
   // first-group/first-item tap hint never needs to show again this visit.
+  // Desktop-only concept: mobile items cascade by scroll, same as always.
   const [hasTapped, setHasTapped] = useState(false);
 
   useEffect(() => {
@@ -397,12 +435,15 @@ function ServiceGroupsStage({ segmentLocal, opacity }) {
     return () => window.removeEventListener("resize", measure);
   }, []);
 
-  const { index: phaseIndex, local: phaseLocal } = resolveWeightedSegment(segmentLocal, GROUP_PHASE_WEIGHTS);
+  const groupPhaseWeights = isMobile ? MOBILE_GROUP_PHASE_WEIGHTS : DESKTOP_GROUP_PHASE_WEIGHTS;
+  const { index: phaseIndex, local: phaseLocal } = resolveWeightedSegment(segmentLocal, groupPhaseWeights);
   const dwellGroupIndex = phaseIndex % 2 === 0 ? phaseIndex / 2 : undefined;
 
   // Each newly-arrived group always starts fresh on its first item, rather
   // than remembering whatever was last tapped the previous time it was
-  // visited — one less thing for the user to have to make sense of.
+  // visited — one less thing for the user to have to make sense of. Only
+  // matters on desktop; mobile's scrollItemIndex already starts at 0
+  // naturally whenever dwellLocal resets to 0 on arrival.
   useEffect(() => {
     setActiveItemIndex(0);
   }, [dwellGroupIndex]);
@@ -442,9 +483,11 @@ function ServiceGroupsStage({ segmentLocal, opacity }) {
                 <ServiceGroupPanel
                   group={group}
                   isCurrentGroup={isCurrentGroup}
+                  dwellLocal={groupDwellLocal(i, phaseIndex, phaseLocal)}
                   activeItemIndex={isCurrentGroup ? activeItemIndex : 0}
                   onSelectItem={handleSelectItem}
-                  showTapHint={i === 0 && isCurrentGroup && !hasTapped}
+                  showTapHint={!isMobile && i === 0 && isCurrentGroup && !hasTapped}
+                  isMobile={isMobile}
                 />
               </div>
             );
@@ -480,7 +523,7 @@ function ProcessHint({ p, side, reveal }) {
 function ProcessMarker({ step, reveal }) {
   return (
     <div
-      className="relative z-10 flex-shrink-0 w-12 h-12 sm:w-16 sm:h-16 rounded-full border-2 border-[#F5A623] bg-[#0D0D0D] text-white flex items-center justify-center font-display font-black text-lg sm:text-xl"
+      className="relative z-10 flex-shrink-0 w-12 h-12 sm:w-16 sm:h-16 border-2 border-[#F5A623] bg-[#0D0D0D] text-white flex items-center justify-center font-display font-black text-lg sm:text-xl"
       style={{ transform: `scale(${0.6 + reveal * 0.4})` }}
     >
       {step}
@@ -504,9 +547,9 @@ function Timeline({ localProgress }) {
       </div>
 
       <div className="relative w-full max-w-[320px] sm:max-w-3xl">
-        <div className="absolute left-[24px] sm:left-1/2 sm:-translate-x-1/2 top-1 bottom-1 w-0.5 bg-white/15 rounded-full" />
+        <div className="absolute left-[24px] sm:left-1/2 sm:-translate-x-1/2 top-1 bottom-1 w-0.5 bg-white/15" />
         <div
-          className="absolute left-[24px] sm:left-1/2 sm:-translate-x-1/2 top-1 w-0.5 bg-[#F5A623] rounded-full"
+          className="absolute left-[24px] sm:left-1/2 sm:-translate-x-1/2 top-1 w-0.5 bg-[#F5A623]"
           style={{ height: `${lineProgress * 100}%` }}
         />
 
@@ -619,28 +662,42 @@ function FloatingOfferButton({ visible }) {
 // The groups stage's weight controls only its own share of scroll —
 // intro/timeline/CTA keep their exact vh since each stage's absolute scroll
 // distance is weight * VH_PER_WEIGHT regardless of what the other weights
-// are. It used to be much larger (14) to give roughly a viewport-height of
-// scroll per *item* — now that items are tapped, not scrolled to, that
-// budget only needs to cover panning between the four groups themselves
-// (see GROUP_PHASE_WEIGHTS), so it's sized down to match — otherwise most
-// of that scroll distance would just sit there doing nothing.
-const SEGMENT_WEIGHTS = [1, 3, 1.5, 1];
-const TOTAL_WEIGHT = SEGMENT_WEIGHTS.reduce((a, b) => a + b, 0);
+// are. Desktop items are tapped, not scrolled to, so that budget only needs
+// to cover panning between the four groups themselves (see
+// GROUP_PHASE_WEIGHTS) — a small weight. Mobile items still cascade by
+// swipe like the original design, so the budget needs to be large enough to
+// give roughly a viewport-height of scroll per *item* again.
+const DESKTOP_GROUPS_WEIGHT = 3;
+const MOBILE_GROUPS_WEIGHT = 14;
 const VH_PER_WEIGHT = 160;
-// Extra scroll distance (beyond the one viewport the panel itself already
-// occupies) the whole intro -> groups -> timeline -> CTA sequence needs —
-// fed to usePinnedPanel as "virtual" content height (see About.jsx for the
-// same pattern): there's no real overflowing DOM block, just a progress
-// value driving which stage/item is shown.
-const VIRTUAL_EXTRA_VH = TOTAL_WEIGHT * VH_PER_WEIGHT;
+
+function useIsMobile(breakpointPx = 768) {
+  const [width, setWidth] = useState(() => (typeof window !== "undefined" ? window.innerWidth : breakpointPx));
+  useEffect(() => {
+    const onResize = () => setWidth(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  return width < breakpointPx;
+}
 
 export default function Services() {
   const panelRef = useRef(null);
   const [progress, setProgress] = useState(0);
+  const isMobile = useIsMobile();
 
-  usePinnedPanel(panelRef, { virtualExtraVh: VIRTUAL_EXTRA_VH, onProgress: setProgress });
+  const segmentWeights = [1, isMobile ? MOBILE_GROUPS_WEIGHT : DESKTOP_GROUPS_WEIGHT, 1.5, 1];
+  const totalWeight = segmentWeights.reduce((a, b) => a + b, 0);
+  // Extra scroll distance (beyond the one viewport the panel itself already
+  // occupies) the whole intro -> groups -> timeline -> CTA sequence needs —
+  // fed to usePinnedPanel as "virtual" content height (see About.jsx for the
+  // same pattern): there's no real overflowing DOM block, just a progress
+  // value driving which stage/item is shown.
+  const virtualExtraVh = totalWeight * VH_PER_WEIGHT;
 
-  const { index: segmentIndex, local: segmentLocal } = resolveWeightedSegment(progress, SEGMENT_WEIGHTS);
+  usePinnedPanel(panelRef, { virtualExtraVh, onProgress: setProgress });
+
+  const { index: segmentIndex, local: segmentLocal } = resolveWeightedSegment(progress, segmentWeights);
 
   const isIntro = segmentIndex === 0;
   const isServiceGroups = segmentIndex === 1;
@@ -664,7 +721,7 @@ export default function Services() {
     <section
       ref={panelRef}
       id="hizmetlerimiz"
-      className="relative h-screen mx-3 sm:mx-6 pt-20 sm:pt-24 rounded-t-[2rem] sm:rounded-t-[2.5rem] overflow-hidden shadow-[0_-20px_60px_rgba(0,0,0,0.35)] bg-[#0D0D0D] flex items-center justify-center"
+      className="relative h-screen pt-20 sm:pt-24 overflow-hidden bg-[#0D0D0D] flex items-center justify-center"
     >
       {/* Conic-gradient backdrop — purely decorative, never intercepts input */}
       <div className="services-depth-bg pointer-events-none" />
@@ -674,7 +731,9 @@ export default function Services() {
 
       {isIntro && <HeroStage opacity={heroOpacity} />}
 
-      {isServiceGroups && <ServiceGroupsStage segmentLocal={segmentLocal} opacity={groupsOpacity} />}
+      {isServiceGroups && (
+        <ServiceGroupsStage segmentLocal={segmentLocal} opacity={groupsOpacity} isMobile={isMobile} />
+      )}
 
       {isTimeline && (
         <div className="absolute inset-0" style={{ opacity: timelineOpacity }}>

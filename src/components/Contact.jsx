@@ -133,7 +133,7 @@ export default function Contact() {
               <h3 className="font-display text-white font-black text-2xl mb-6">Teklif Formu</h3>
 
               {sent && (
-                <div className="mb-6 p-4 bg-green-500/15 border border-green-500/30 rounded-xl text-green-400 font-semibold text-sm">
+                <div className="mb-6 p-4 bg-green-500/15 border border-green-500/30 text-green-400 font-semibold text-sm">
                   ✓ Mesajınız iletildi! En kısa sürede size dönüş yapacağız.
                 </div>
               )}

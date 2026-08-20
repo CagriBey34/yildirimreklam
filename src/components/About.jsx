@@ -94,14 +94,11 @@ export default function About() {
 
   const reveal = revealFor(segmentLocal);
 
-  // While scrolling through the section, the visible card is pinned via
-  // `fixed`. Before/after that range it sits statically at the top/bottom
-  // of the section so the handoff to the sticky card above/below is seamless.
   return (
     <section
       ref={panelRef}
       id="hakkimizda"
-      className="relative h-screen  verflow-hidden  bg-[#F8F8F8] flex items-center"
+      className="relative h-screen pt-20 sm:pt-24 overflow-hidden bg-[#F8F8F8] flex items-center"
     >
       {/* "Neden Biz?" full-screen blinking headline */}
       <div
