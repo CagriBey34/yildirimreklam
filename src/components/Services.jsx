@@ -206,7 +206,7 @@ function HeroStage({ opacity }) {
 // exactly like a small accordion — so scroll is reserved entirely for
 // moving between the four tables.
 // ---------------------------------------------------------------------------
-function ServiceGroupRow({ number, title, isActive, interactive, onSelect, showTapHint }) {
+function ServiceGroupRow({ number, title, isActive, interactive, onSelect }) {
   return (
     <button
       type="button"
@@ -238,7 +238,6 @@ function ServiceGroupRow({ number, title, isActive, interactive, onSelect, showT
               isActive ? "text-[#F5A623] translate-x-1" : "text-white/25"
             }`}
           />
-          {showTapHint && <TapHint className="absolute -top-1.5 -right-1.5 w-3 h-3" />}
         </span>
       </span>
       <span
@@ -265,18 +264,15 @@ function TapHint({ className = "" }) {
 
 // A single item's photo, stacked with its siblings and crossfaded in/out —
 // all of a group's item images are always mounted so switching the active
-// one is a pure opacity/scale change, never a swap that could flash.
-// `opacity` is continuous on mobile (the crossfade tracks the swipe/scroll
-// position frame by frame — `instant` drops the CSS transition there so it
-// never chases a target that's already moving) and binary on desktop (a
-// discrete tap, so it keeps a short eased transition instead).
-function ServiceItemVisual({ image, label, opacity, instant }) {
+// one (a discrete tap, on both desktop and mobile) is a pure opacity/scale
+// change with a short eased transition, never a swap that could flash.
+function ServiceItemVisual({ image, label, opacity }) {
   return (
     <img
       src={image}
       alt={`${label} uygulama örneği`}
       aria-hidden={opacity > 0.5 ? undefined : true}
-      className={`absolute inset-0 w-full h-full object-cover ${instant ? "" : "transition-all duration-500 ease-out"}`}
+      className="absolute inset-0 w-full h-full object-cover transition-all duration-500 ease-out"
       style={{ opacity, transform: `scale(${1.06 - opacity * 0.06})` }}
     />
   );
@@ -289,38 +285,22 @@ function ServiceItemVisual({ image, label, opacity, instant }) {
 // slide) but inert (not focusable/hoverable/tappable) and frozen on the
 // first item.
 //
-// Two interaction modes, chosen by `isMobile`:
-// - Desktop: `activeItemIndex`/`onSelectItem` (owned by the parent stage)
-//   drive everything — tapping a row is the only thing that changes which
-//   item is shown, scroll only drives which *group* is on screen.
-// - Mobile: items still cascade by scroll/swipe, exactly like the original
-//   design — `dwellLocal` (this group's own scroll position within its
-//   dwell phase) drives a continuous crossfade through the items, and the
-//   dots below are a passive progress indicator, not a control.
-const GROUP_REVEAL_FRACTION = 0.8;
-
-function ServiceGroupPanel({ group, isCurrentGroup, dwellLocal, activeItemIndex, onSelectItem, showTapHint, isMobile }) {
+// Item selection is `activeItemIndex`/`onSelectItem` (owned by the parent
+// stage) on both desktop and mobile — only the *control* differs: a
+// numbered tappable list on desktop, prev/next arrows + tappable dots
+// overlaid on the photo on mobile. Item switching used to be scroll/swipe
+// driven on mobile (a continuous crossfade tied to scroll position), but a
+// fast flick could blow through every item in a group in an instant with no
+// way to tell what had just happened — an explicit tap target, identical to
+// desktop's model, means how fast someone scrolls can no longer skip
+// content past them.
+function ServiceGroupPanel({ group, isCurrentGroup, activeItemIndex, onSelectItem, showTapHint }) {
   const items = group.items;
-
-  const rawItemPos = Math.min(dwellLocal / GROUP_REVEAL_FRACTION, 1) * items.length;
-  const scrollItemIndex = clamp(Math.floor(rawItemPos), 0, items.length - 1);
-  const itemRowProgress = clamp(rawItemPos - scrollItemIndex, 0, 1);
-
-  const effectiveIndex = isMobile ? scrollItemIndex : activeItemIndex;
+  const effectiveIndex = activeItemIndex;
   const activeItem = items[effectiveIndex];
+  const visualOpacity = (i) => (i === effectiveIndex ? 1 : 0);
 
-  // Mobile crossfade: the image blends continuously into the next one across
-  // its *entire* slot (no held/static stretch) so any amount of scrolling —
-  // forward or backward — always reads as a slow, ongoing flow between
-  // photos rather than a static hold followed by an abrupt snap at the end.
-  // Still purely a function of scroll position, no timer.
-  const crossfadeT = itemRowProgress;
-  const visualOpacity = (i) => {
-    if (!isMobile) return i === effectiveIndex ? 1 : 0;
-    if (i === scrollItemIndex) return 1 - crossfadeT;
-    if (i === scrollItemIndex + 1) return crossfadeT;
-    return 0;
-  };
+  const goTo = (i) => onSelectItem((i + items.length) % items.length);
 
   return (
     <div className="w-full h-full flex items-center px-5 sm:px-8 md:px-10 lg:px-16">
@@ -343,34 +323,16 @@ function ServiceGroupPanel({ group, isCurrentGroup, dwellLocal, activeItemIndex,
                 isActive={i === effectiveIndex}
                 interactive={isCurrentGroup}
                 onSelect={() => onSelectItem(i)}
-                showTapHint={showTapHint && i === 0}
               />
             ))}
           </div>
 
-          {/* Mobile: passive progress dots, driven by scroll like before */}
-          <div className="flex md:hidden items-center gap-2 mt-2" aria-hidden="true">
-            {items.map((item, i) => (
-              <span
-                key={item.label}
-                className={`h-1.5 transition-all duration-300 ${
-                  i === effectiveIndex ? "w-6 bg-[#F5A623]" : "w-1.5 bg-white/25"
-                }`}
-              />
-            ))}
-          </div>
         </div>
 
         <div className="w-full md:w-[54%] translate-x-2 sm:translate-x-3 md:translate-x-5">
           <div className="media-frame-neu w-full aspect-[16/9] md:aspect-[16/11] bg-[#171717]">
             {items.map((item, i) => (
-              <ServiceItemVisual
-                key={item.label}
-                image={item.image}
-                label={item.label}
-                opacity={visualOpacity(i)}
-                instant={isMobile}
-              />
+              <ServiceItemVisual key={item.label} image={item.image} label={item.label} opacity={visualOpacity(i)} />
             ))}
             <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/5 to-transparent pointer-events-none" />
             <div className="absolute bottom-0 left-0 p-6 sm:p-8">
@@ -378,6 +340,59 @@ function ServiceGroupPanel({ group, isCurrentGroup, dwellLocal, activeItemIndex,
                 0{effectiveIndex + 1}
               </div>
               <p className="text-white/85 text-sm sm:text-base">{activeItem.label}</p>
+            </div>
+          </div>
+
+          {/* Prev/next + dots, centered under the photo, on both desktop and
+              mobile — the same btn-neu shell (thick border, hard shadow, 3D
+              pop) as every other button on the site, so "how do I move to
+              the next photo" reads as an obvious, self-explanatory control
+              instead of something to be discovered by scrolling or hunting
+              the list. Desktop keeps its list too (still the fastest way to
+              jump straight to a specific item by name); this row is the
+              quick, universal next/prev. */}
+          <div className="relative flex items-center justify-center gap-4 mt-5">
+            <button
+              type="button"
+              tabIndex={isCurrentGroup ? 0 : -1}
+              onClick={() => goTo(effectiveIndex - 1)}
+              aria-label={`Önceki: ${items[(effectiveIndex - 1 + items.length) % items.length].label}`}
+              className={`btn-neu flex items-center justify-center w-11 h-11 flex-shrink-0 bg-[#F5A623] hover:bg-white text-[#1A1A1A] focus:outline-none focus-visible:ring-2 focus-visible:ring-white ${
+                isCurrentGroup ? "" : "pointer-events-none"
+              }`}
+            >
+              <ArrowIcon className="w-5 h-5 rotate-180" />
+            </button>
+
+            <div className="flex items-center gap-2.5">
+              {items.map((item, i) => (
+                <button
+                  key={item.label}
+                  type="button"
+                  tabIndex={isCurrentGroup ? 0 : -1}
+                  onClick={() => onSelectItem(i)}
+                  aria-label={item.label}
+                  aria-current={i === effectiveIndex ? "true" : undefined}
+                  className={`h-2.5 rounded-full transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F5A623] ${
+                    i === effectiveIndex ? "w-7 bg-[#F5A623]" : "w-2.5 bg-white/25"
+                  } ${isCurrentGroup ? "" : "pointer-events-none"}`}
+                />
+              ))}
+            </div>
+
+            <div className="relative flex-shrink-0">
+              <button
+                type="button"
+                tabIndex={isCurrentGroup ? 0 : -1}
+                onClick={() => goTo(effectiveIndex + 1)}
+                aria-label={`Sonraki: ${items[(effectiveIndex + 1) % items.length].label}`}
+                className={`btn-neu flex items-center justify-center w-11 h-11 bg-[#F5A623] hover:bg-white text-[#1A1A1A] focus:outline-none focus-visible:ring-2 focus-visible:ring-white ${
+                  isCurrentGroup ? "" : "pointer-events-none"
+                }`}
+              >
+                <ArrowIcon className="w-5 h-5" />
+              </button>
+              {showTapHint && <TapHint className="absolute -top-1 -right-1 w-3 h-3" />}
             </div>
           </div>
         </div>
@@ -388,29 +403,12 @@ function ServiceGroupPanel({ group, isCurrentGroup, dwellLocal, activeItemIndex,
 
 // Seven phases inside the groups stage: dwell on group 0, pan right, dwell
 // on group 1, pan down, dwell on group 2, pan left, dwell on group 3. Each
-// group's own dwell phase sits at phaseIndex `groupIndex * 2`.
-//
-// On desktop, items are tapped rather than scrolled to, so dwell only needs
-// to be a deliberate-enough scroll distance that a stray wheel tick doesn't
-// blow straight through a group unnoticed — equal weights keep that simple.
-// On mobile, items still cascade by swipe like the original design, so each
-// dwell needs real scroll room to move through every item — weighted much
-// heavier than the pans between groups, same ratio as the original tuning.
-const DESKTOP_GROUP_PHASE_WEIGHTS = [1, 1, 1, 1, 1, 1, 1];
-const MOBILE_GROUP_PHASE_WEIGHTS = [1.3, 0.4, 1.3, 0.4, 1.3, 0.4, 1.3];
-
-// A group's item-list progress: 0 before its dwell phase has started (still
-// shows the first item), phaseLocal while it's the one being dwelled on,
-// and 1 once scroll has moved past it — frozen on its *last* item rather
-// than snapping back to the first, which is what caused items to visibly
-// jump backwards for a frame while a group was sliding off-screen. Only
-// meaningful on mobile (desktop items are tap-driven), but cheap enough to
-// always compute.
-function groupDwellLocal(groupIndex, phaseIndex, phaseLocal) {
-  const ownPhase = groupIndex * 2;
-  if (phaseIndex === ownPhase) return phaseLocal;
-  return phaseIndex > ownPhase ? 1 : 0;
-}
+// group's own dwell phase sits at phaseIndex `groupIndex * 2`. Items (on
+// both desktop and mobile) are tapped rather than scrolled to, so dwell only
+// needs to be a deliberate-enough scroll distance that a stray wheel tick or
+// swipe doesn't blow straight through a group unnoticed — equal weights
+// keep that simple.
+const GROUP_PHASE_WEIGHTS = [1, 1, 1, 1, 1, 1, 1];
 
 // Transit phases ease their own progress so the pan accelerates/decelerates
 // smoothly instead of moving at a harsh, constant rate. The canvas transform
@@ -449,13 +447,13 @@ function initialViewportSize() {
   return { width: window.innerWidth, height: window.innerHeight };
 }
 
-function ServiceGroupsStage({ segmentLocal, opacity, isMobile }) {
+function ServiceGroupsStage({ segmentLocal, opacity }) {
   const viewportRef = useRef(null);
   const [size, setSize] = useState(initialViewportSize);
   const [activeItemIndex, setActiveItemIndex] = useState(0);
-  // Whether the user has ever tapped an item, anywhere — once true, the
-  // first-group/first-item tap hint never needs to show again this visit.
-  // Desktop-only concept: mobile items cascade by scroll, same as always.
+  // Whether the user has ever tapped/selected an item, anywhere — once
+  // true, the first-group/first-item tap hint never needs to show again
+  // this visit.
   const [hasTapped, setHasTapped] = useState(false);
 
   useEffect(() => {
@@ -470,15 +468,12 @@ function ServiceGroupsStage({ segmentLocal, opacity, isMobile }) {
     return () => window.removeEventListener("resize", measure);
   }, []);
 
-  const groupPhaseWeights = isMobile ? MOBILE_GROUP_PHASE_WEIGHTS : DESKTOP_GROUP_PHASE_WEIGHTS;
-  const { index: phaseIndex, local: phaseLocal } = resolveWeightedSegment(segmentLocal, groupPhaseWeights);
+  const { index: phaseIndex, local: phaseLocal } = resolveWeightedSegment(segmentLocal, GROUP_PHASE_WEIGHTS);
   const dwellGroupIndex = phaseIndex % 2 === 0 ? phaseIndex / 2 : undefined;
 
   // Each newly-arrived group always starts fresh on its first item, rather
-  // than remembering whatever was last tapped the previous time it was
-  // visited — one less thing for the user to have to make sense of. Only
-  // matters on desktop; mobile's scrollItemIndex already starts at 0
-  // naturally whenever dwellLocal resets to 0 on arrival.
+  // than remembering whatever was last selected the previous time it was
+  // visited — one less thing for the user to have to make sense of.
   useEffect(() => {
     setActiveItemIndex(0);
   }, [dwellGroupIndex]);
@@ -518,11 +513,9 @@ function ServiceGroupsStage({ segmentLocal, opacity, isMobile }) {
                 <ServiceGroupPanel
                   group={group}
                   isCurrentGroup={isCurrentGroup}
-                  dwellLocal={groupDwellLocal(i, phaseIndex, phaseLocal)}
                   activeItemIndex={isCurrentGroup ? activeItemIndex : 0}
                   onSelectItem={handleSelectItem}
-                  showTapHint={!isMobile && i === 0 && isCurrentGroup && !hasTapped}
-                  isMobile={isMobile}
+                  showTapHint={i === 0 && isCurrentGroup && !hasTapped}
                 />
               </div>
             );
@@ -702,31 +695,17 @@ function FloatingOfferButton({ visible }) {
 // The groups stage's weight controls only its own share of scroll —
 // intro/timeline/CTA keep their exact vh since each stage's absolute scroll
 // distance is weight * VH_PER_WEIGHT regardless of what the other weights
-// are. Desktop items are tapped, not scrolled to, so that budget only needs
-// to cover panning between the four groups themselves (see
-// GROUP_PHASE_WEIGHTS) — a small weight. Mobile items still cascade by
-// swipe like the original design, so the budget needs to be large enough to
-// give roughly a viewport-height of scroll per *item* again.
-const DESKTOP_GROUPS_WEIGHT = 3;
-const MOBILE_GROUPS_WEIGHT = 14;
+// are. Items are tapped rather than scrolled to (on both desktop and
+// mobile), so that budget only needs to cover panning between the four
+// groups themselves (see GROUP_PHASE_WEIGHTS) — a small weight.
+const GROUPS_WEIGHT = 3;
 const VH_PER_WEIGHT = 160;
-
-function useIsMobile(breakpointPx = 768) {
-  const [width, setWidth] = useState(() => (typeof window !== "undefined" ? window.innerWidth : breakpointPx));
-  useEffect(() => {
-    const onResize = () => setWidth(window.innerWidth);
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
-  return width < breakpointPx;
-}
 
 export default function Services() {
   const panelRef = useRef(null);
   const [progress, setProgress] = useState(0);
-  const isMobile = useIsMobile();
 
-  const segmentWeights = [1, isMobile ? MOBILE_GROUPS_WEIGHT : DESKTOP_GROUPS_WEIGHT, 1.5, 1];
+  const segmentWeights = [1, GROUPS_WEIGHT, 1.5, 1];
   const totalWeight = segmentWeights.reduce((a, b) => a + b, 0);
   // Extra scroll distance (beyond the one viewport the panel itself already
   // occupies) the whole intro -> groups -> timeline -> CTA sequence needs —
@@ -772,7 +751,7 @@ export default function Services() {
       {isIntro && <HeroStage opacity={heroOpacity} />}
 
       {isServiceGroups && (
-        <ServiceGroupsStage segmentLocal={segmentLocal} opacity={groupsOpacity} isMobile={isMobile} />
+        <ServiceGroupsStage segmentLocal={segmentLocal} opacity={groupsOpacity} />
       )}
 
       {isTimeline && (

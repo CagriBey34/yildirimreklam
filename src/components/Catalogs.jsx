@@ -3,15 +3,15 @@ import { usePinnedPanel } from "../hooks/usePinnedPanel";
 
 const catalogs = [
   {
-    title: "Promosyon Kataloğu 1",
-    file: "/katalog/promosyon.pdf",
-    downloadName: "Promosyon-Katalogu-1.pdf",
+    title: "Promosyon Kataloğu",
+    file: "/katalog/Promosyon-Katalogu-1.pdf",
+    downloadName: "Promosyon-Katalogu.pdf",
     sizeLabel: "126 MB",
   },
   {
-    title: "Promosyon Kataloğu 2",
-    file: "/katalog/promosyon2.pdf",
-    downloadName: "Promosyon-Katalogu-2.pdf",
+    title: "Kristal Kataloğu",
+    file: "/katalog/kristal_katalog.pdf",
+    downloadName: "Kristal-Katalogu.pdf",
     sizeLabel: "99 MB",
   },
 ];
