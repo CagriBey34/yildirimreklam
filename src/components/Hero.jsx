@@ -145,7 +145,16 @@ export default function Hero() {
     <section
       id="anasayfa"
       ref={heroRef}
-      className="relative min-h-dvh flex flex-col overflow-hidden bg-[#1A1A1A]"
+      // `svh` (not `dvh`) deliberately: dvh live-reflows as the mobile
+      // address bar collapses, and that collapse is triggered by the
+      // user's very first scroll — exactly when usePinnedPanel's GSAP pin
+      // is measuring/engaging. Racing a live height change against pin
+      // math made the Hero -> About transition stick. svh is pinned to the
+      // worst-case (address-bar-visible) height and never moves, so this
+      // very first pin has a stable target — every later panel's first
+      // scroll happens after the chrome has already settled, so they don't
+      // need it.
+      className="relative min-h-svh flex flex-col overflow-hidden bg-[#1A1A1A]"
     >
       {/* Background: an illuminated sign the agency itself produced (a nod
           to the craft, not a stock photo), graded to sit inside the site's
@@ -220,7 +229,7 @@ export default function Hero() {
           continuous sequence rather than each block fading in separately —
           the giant wordmark anchored to (and bleeding past) the very
           bottom edge. */}
-      <div ref={contentRef} className="relative z-10 flex flex-col min-h-dvh w-full">
+      <div ref={contentRef} className="relative z-10 flex flex-col min-h-svh w-full">
         <div className="flex-1 flex flex-col items-start justify-start text-left px-4 sm:px-6 lg:px-12 pt-28 sm:pt-32 pb-4">
           <div className="max-w-xl">
             <h1 className="font-display text-2xl sm:text-3xl md:text-4xl font-black text-white leading-[1.15] mb-5">
@@ -301,10 +310,15 @@ export default function Hero() {
 
       {/* Scroll hint chevrons, pinned to the very bottom of the screen —
           same cue used at the bottom of the "Neden Biz?" section — so the
-          intro screen also signals there's more to scroll to. */}
-      <div
-        className="absolute inset-x-0 bottom-6 sm:bottom-8 z-10 flex flex-col items-center pointer-events-none"
-        aria-hidden="true"
+          intro screen also signals there's more to scroll to. A real button
+          (not just a decorative cue) so tapping it on mobile — where
+          there's no hover/scroll-wheel affordance to "discover" the next
+          section — actually advances to About. */}
+      <button
+        type="button"
+        onClick={() => document.getElementById("hakkimizda")?.scrollIntoView({ behavior: "smooth" })}
+        aria-label="Aşağı kaydır"
+        className="absolute inset-x-0 bottom-6 sm:bottom-8 z-10 flex flex-col items-center"
       >
         {[0, 1, 2].map((i) => (
           <svg
@@ -323,7 +337,7 @@ export default function Hero() {
             />
           </svg>
         ))}
-      </div>
+      </button>
     </section>
   );
 }
