@@ -12,12 +12,16 @@
   --font-script: 'Dancing Script', cursive;
 }
 
-* {
-  scroll-behavior: smooth;
-}
-
+/* No global `scroll-behavior: smooth` here on purpose: it applies the
+   browser's own smooth-scroll easing to every scroll (including the
+   pinned/scrubbed sections GSAP ScrollTrigger drives), and that easing
+   fights ScrollTrigger for control of the scroll position — the two
+   competing interpolations are what caused pinned transitions (worst on
+   mobile) to stutter and never quite reach their end state. Every
+   intentional "smooth jump" (nav links, the Hero scroll-hint button) already
+   passes `behavior: "smooth"` directly to scrollTo/scrollIntoView, so they
+   don't need this to animate. */
 html {
-  scroll-behavior: smooth;
   background: #141414;
 }
 
