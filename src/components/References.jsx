@@ -13,17 +13,17 @@ const brands = [
   { name: "Helal Dünya", file: "helaldunya.png" },
   { name: "Helvacı Ali", file: "helvaciali.png" },
   { name: "IDL Yapı", file: "idlyapi.png" },
-  { name: "İsabet Okulları", file: "isabetokulları.png" },
   { name: "İstanbul Üniversitesi", file: "istanbuluni2.jpg" },
   { name: "MÜSİAD", file: "müsiad.png" },
   { name: "New Holland", file: "newholland.png" },
   { name: "Renault", file: "renault.png" },
   { name: "Siyer Yayınları", file: "siyeryayinlari.png" },
   { name: "Uygun AVM", file: "uygunavm.png" },
-  { name: "Yummy Cups", file: "yummycups.png" },
+  { name: "Yummy Cup", file: "yummycups.png" },
   { name: "Zinde Okulları", file: "zindeokulları.png" },
   { name: "Sütlüce Kadayıf", file: "sutluce.png" },
   { name: "Güneli Fırın", file: "guneli.png" },
+  { name: "Chint Group", file: "chint.png" },
 ];
 
 // Auto-scrolling logo strip that's also fully drag/swipe-able by hand, on

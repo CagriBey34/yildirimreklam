@@ -89,12 +89,39 @@ export default function Contact() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // In production, this would submit to a backend
-    setSent(true);
-    setTimeout(() => setSent(false), 4000);
-    setForm({ name: "", phone: "", email: "", message: "" });
+    
+    // Yükleniyor durumu ekleyebilirsin ama şimdilik doğrudan gönderiyoruz
+    try {
+      const response = await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          // BURAYA E-POSTANA GELEN ACCESS KEY'İ YAPIŞTIR:
+          access_key: "c69b2405-1f5a-4972-8825-326410609546", 
+          subject: "Yıldırım Reklam - Web Sitesinden Yeni Mesaj",
+          from_name: form.name,
+          ...form // name, phone, email ve message verilerini otomatik gönderir
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setSent(true);
+        setTimeout(() => setSent(false), 4000);
+        setForm({ name: "", phone: "", email: "", message: "" });
+      } else {
+        alert("Mesaj gönderilirken bir hata oluştu: " + result.message);
+      }
+    } catch (error) {
+      console.error("Gönderim hatası:", error);
+      alert("Bağlantı hatası, lütfen daha sonra tekrar deneyin.");
+    }
   };
 
   return (

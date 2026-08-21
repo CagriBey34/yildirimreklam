@@ -9,7 +9,7 @@ const catalogs = [
     sizeLabel: "126 MB",
   },
   {
-    title: "Kristal Kataloğu",
+    title: "Plaket Kataloğu",
     file: "/katalog/kristal_katalog.pdf",
     downloadName: "Kristal-Katalogu.pdf",
     sizeLabel: "99 MB",
