@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
 import About from "./components/About";
@@ -9,6 +11,27 @@ import Footer from "./components/Footer";
 import WhatsAppButton from "./components/WhatsAppButton";
 
 export default function App() {
+  // `#kataloglarimiz` gibi bir bölüm bağlantısıyla açıldığında tarayıcının
+  // kendi anchor atlaması bölümler (ve GSAP pin spacer'ları) daha yerleşmeden
+  // gerçekleştiği için yanlış yere düşüyor. Bölümün gerçek konumunu Navbar'la
+  // aynı şekilde (offsetParent zinciri) hesaplayıp bir tık sonra oraya
+  // gidiyoruz. `#/katalog/...` bir rota, bölüm değil — ona karışmıyoruz.
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (!hash || hash.startsWith("#/")) return;
+
+    const id = hash.slice(1);
+    const timer = setTimeout(() => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      let top = 0;
+      for (let node = el; node; node = node.offsetParent) top += node.offsetTop;
+      window.scrollTo(0, top);
+    }, 80);
+
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <div className="font-sans antialiased relative">
       {/* Fixed decorative grid background, visible in the gaps between the stacked cards */}
