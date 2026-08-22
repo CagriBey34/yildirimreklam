@@ -24,6 +24,7 @@ const brands = [
   { name: "Sütlüce Kadayıf", file: "sutluce.png" },
   { name: "Güneli Fırın", file: "guneli.png" },
   { name: "Chint Group", file: "chint.png" },
+  { name: "Sarıyer Böre", file: "sarıyerborek.png" },
 ];
 
 // Auto-scrolling logo strip that's also fully drag/swipe-able by hand, on
