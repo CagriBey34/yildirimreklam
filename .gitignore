@@ -26,3 +26,6 @@ public/katalog/*.pdf
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# PDF.js worker — vite.config.js tarafından otomatik kopyalanıyor
+public/pdf.worker.min.js

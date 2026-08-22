@@ -12,10 +12,14 @@ import HTMLFlipBook from "react-pageflip";
 
 import { playPageFlipSound, preloadPageFlipSound } from "../../utils/pageFlipSound";
 
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  "pdfjs-dist/build/pdf.worker.min.mjs",
-  import.meta.url
-).toString();
+// Worker, vite.config.js'teki copy-pdf-worker-as-js eklentisi tarafından
+// public/ altına .js uzantısıyla kopyalanıyor. Doğrudan .mjs'i işaret etmek
+// canlıda çalışmıyordu: sunucu .mjs'i application/octet-stream olarak
+// gönderiyor, tarayıcı da modül script'lerindeki katı MIME denetimi yüzünden
+// worker'ı reddedip PDF'i hiç açamıyordu. Ayrıntılı gerekçe vite.config.js'te.
+//
+// BASE_URL öneki, site bir alt dizine kurulursa yolun bozulmaması için.
+pdfjs.GlobalWorkerOptions.workerSrc = `${import.meta.env.BASE_URL}pdf.worker.min.js`;
 
 // Çift sayfa (kitap gibi açık) görünüme ancak bu genişlikten sonra geçiliyor;
 // altında tek sayfa gösteriliyor, yoksa telefonda iki sayfa da okunamayacak
