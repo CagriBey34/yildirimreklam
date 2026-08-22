@@ -252,7 +252,7 @@ export default function Navbar() {
                 className="btn-neu inline-flex items-center gap-2 bg-[#F8F8F8] hover:bg-white text-[#1A1A1A] font-bold text-base px-6 py-3"
               >
                 <PhoneIcon className="w-4 h-4" />
-                0532 445 79 97
+                0555 008 79 21
               </a>
             </div>
           </div>
