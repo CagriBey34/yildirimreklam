@@ -23,7 +23,7 @@ export default function WhatsAppButton() {
     // (which is why it only ever appeared down by the footer).
     <div className="fixed bottom-5 left-5 sm:bottom-8 sm:left-8 z-40">
       <a
-        href="https://wa.me/905324457997?text=Merhaba%2C%20bilgi%20almak%20istiyorum."
+        href="https://wa.me/905550087921?text=Merhaba%2C%20bilgi%20almak%20istiyorum."
         target="_blank"
         rel="noopener noreferrer"
         aria-label="WhatsApp'tan yazın"
