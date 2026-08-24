@@ -28,6 +28,23 @@ import kupa from "../assets/services/kupa.png";
 import tekstil from "../assets/services/tekstil.png";
 import vip from "../assets/services/vip.png";
 import yonlendirme from "../assets/services/yonlendirme.png";
+import lightbox from "../assets/services/lightbox.png";
+import kartoncanta from "../assets/services/kartoncanta.png";
+import bayrak1 from "../assets/services/bayrak1.png";
+import bayrak2 from "../assets/services/bayrak2.png";
+import bayrak3 from "../assets/services/bayrak3.png";
+import bayrak4 from "../assets/services/bayrak4.png";
+import bayrak5 from "../assets/services/bayrak5.png";
+import bayrak6 from "../assets/services/bayrak6.png";
+import bayrak7 from "../assets/services/bayrak7.png";
+import display1 from "../assets/services/display1.png";
+import display2 from "../assets/services/display2.png";
+import display3 from "../assets/services/display3.png";
+import display4 from "../assets/services/display4.png";
+import display5 from "../assets/services/display5.png";
+import display6 from "../assets/services/display6.png";
+import display7 from "../assets/services/display7.png";
+import display8 from "../assets/services/display8.png";
 
 
 // Four service groups, each its own full screen. Every item carries its own
@@ -41,10 +58,12 @@ const serviceGroups = [
     items: [
       { label: "Işıklı", image: ısıklı },
       { label: "Işıksız", image: ısıksız },
+      { label: "Lightbox", image: lightbox },
       { label: "Vinil Germe", image: vinil },
       { label: "Totem", image: totem },
       { label: "Çatı Tabelası", image: catı },
       { label: "Yönlendirme Tabelası", image: yonlendirme },
+     
     ],
   },
   {
@@ -75,6 +94,20 @@ const serviceGroups = [
     ],
   },
   {
+    id: "display-urunler",
+    title: "Display Ürünler",
+    items: [
+      { label: "Roll-up Banner", image: display1 },
+      { label: "X-Banner", image: display2 },
+      { label: "Fasulye Stand", image: display3 },
+      { label: "Örümcek Stand", image: display4 },
+      { label: "Backdrop", image: display5 },
+      { label: "Broşürlük Stand", image: display6 },
+      { label: "Rondo Çerçeveler", image: display7 },
+      { label: "Duba", image: display8 },
+    ],
+  },
+  {
     id: "matbaa",
     title: "Matbaa",
     items: [
@@ -83,6 +116,20 @@ const serviceGroups = [
       { label: "Katalog", image: katalog },
       { label: "Cepli Dosya", image: cepli },
       { label: "Bloknot", image: bloknot },
+      { label: "Karton Çanta", image: kartoncanta },
+    ],
+  },
+  {
+    id: "bayrak",
+    title: "Bayrak",
+    items: [
+      { label: "Yelken Bayrak", image: bayrak1 },
+      { label: "Masa Bayrağı", image: bayrak2 },
+      { label: "Kırlangıç Bayrak", image: bayrak3 },
+      { label: "Makam Bayrağı", image: bayrak4 },
+      { label: "Gönder Bayrağı", image: bayrak5 },
+      { label: "Süsleme Bayrağı", image: bayrak6 },
+      { label: "Sopalı Bayrak", image: bayrak7 },
     ],
   },
 ];
@@ -200,11 +247,17 @@ function HeroStage({ opacity }) {
 }
 
 // ---------------------------------------------------------------------------
-// Stage 2: four full screens, one per service group, navigated by scrolling
-// (pan right/down/left between them). Within a group, though, its items
+// Stage 2: one full screen per service group, stacked top-to-bottom and
+// navigated by a single continuous upward scroll — the backdrop stays put
+// while each group's own text+photo panel slides up and the next group's
+// panel rises in from below, like scrubbing a video rather than jumping
+// between slides. The offset is a continuous function of scroll progress
+// (smoothed further upstream by the RAF lerp on the section's pin
+// progress), so scrolling fast just fast-forwards through the same motion —
+// it can never skip a group outright. Within a group, though, its items
 // don't advance on scroll at all — the user taps/clicks one to see it,
 // exactly like a small accordion — so scroll is reserved entirely for
-// moving between the four tables.
+// moving between groups.
 // ---------------------------------------------------------------------------
 function ServiceGroupRow({ number, title, isActive, interactive, onSelect }) {
   return (
@@ -401,40 +454,30 @@ function ServiceGroupPanel({ group, isCurrentGroup, activeItemIndex, onSelectIte
   );
 }
 
-// Seven phases inside the groups stage: dwell on group 0, pan right, dwell
-// on group 1, pan down, dwell on group 2, pan left, dwell on group 3. Each
-// group's own dwell phase sits at phaseIndex `groupIndex * 2`. Items (on
-// both desktop and mobile) are tapped rather than scrolled to, so dwell only
-// needs to be a deliberate-enough scroll distance that a stray wheel tick or
-// swipe doesn't blow straight through a group unnoticed — equal weights
-// keep that simple.
-const GROUP_PHASE_WEIGHTS = [1, 1, 1, 1, 1, 1, 1];
+// 2N-1 phases inside the groups stage: dwell on group 0, pan up, dwell on
+// group 1, pan up, ... dwell on group N-1. Each group's own dwell phase sits
+// at phaseIndex `groupIndex * 2`. Items (on both desktop and mobile) are
+// tapped rather than scrolled to, so dwell only needs to be a
+// deliberate-enough scroll distance that a stray wheel tick or swipe
+// doesn't blow straight through a group unnoticed — equal weights keep that
+// simple.
+const GROUP_PHASE_WEIGHTS = Array(serviceGroups.length * 2 - 1).fill(1);
 
-// Transit phases ease their own progress so the pan accelerates/decelerates
-// smoothly instead of moving at a harsh, constant rate. The canvas transform
-// below applies this offset with no CSS transition of its own — the value
-// is already a continuous function of scroll (smoothed further upstream by
-// the RAF lerp on the section's pin progress), so a second, clock-based
-// transition here would just make the pan visibly chase a moving target
-// instead of tracking the scroll gesture directly.
-function groupCanvasOffset(phaseIndex, phaseLocal, width, height) {
+// Transit phases ease their own progress so the upward pan
+// accelerates/decelerates smoothly instead of moving at a harsh, constant
+// rate. The canvas transform below applies this offset with no CSS
+// transition of its own — the value is already a continuous function of
+// scroll (smoothed further upstream by the RAF lerp on the section's pin
+// progress), so a second, clock-based transition here would just make the
+// pan visibly chase a moving target instead of tracking the scroll gesture
+// directly.
+function groupCanvasOffset(phaseIndex, phaseLocal, height) {
   const eased = easeInOutCubic(phaseLocal);
-  switch (phaseIndex) {
-    case 0:
-      return { x: 0, y: 0 };
-    case 1:
-      return { x: width * eased, y: 0 };
-    case 2:
-      return { x: width, y: 0 };
-    case 3:
-      return { x: width, y: height * eased };
-    case 4:
-      return { x: width, y: height };
-    case 5:
-      return { x: width * (1 - eased), y: height };
-    default:
-      return { x: 0, y: height };
+  if (phaseIndex % 2 === 0) {
+    return { y: (phaseIndex / 2) * height };
   }
+  const fromGroup = (phaseIndex - 1) / 2;
+  return { y: (fromGroup + eased) * height };
 }
 
 // Seeded from the current viewport instead of {0,0} so the pan canvas has a
@@ -484,32 +527,22 @@ function ServiceGroupsStage({ segmentLocal, opacity }) {
   };
 
   const { width, height } = size;
-  const offset = groupCanvasOffset(phaseIndex, phaseLocal, width, height);
+  const offset = groupCanvasOffset(phaseIndex, phaseLocal, height);
 
   return (
     <div ref={viewportRef} className="absolute inset-0 overflow-hidden" style={{ opacity }}>
       {width > 0 && height > 0 && (
         <div
-          className="absolute top-0 left-0"
+          className="absolute top-0 left-0 w-full"
           style={{
-            width: width * 2,
-            height: height * 2,
-            transform: `translate(${-offset.x}px, ${-offset.y}px)`,
+            height: height * serviceGroups.length,
+            transform: `translateY(${-offset.y}px)`,
           }}
         >
           {serviceGroups.map((group, i) => {
             const isCurrentGroup = i === dwellGroupIndex;
             return (
-              <div
-                key={group.id}
-                className="absolute"
-                style={{
-                  width,
-                  height,
-                  left: i === 1 || i === 2 ? width : 0,
-                  top: i === 2 || i === 3 ? height : 0,
-                }}
-              >
+              <div key={group.id} className="absolute left-0 w-full" style={{ height, top: i * height }}>
                 <ServiceGroupPanel
                   group={group}
                   isCurrentGroup={isCurrentGroup}
