@@ -1,0 +1,72 @@
+/* Sahne: tek uzun cadde, kamera soldan sağa ilerler; her istasyonda yaklaşıp detaya iner.
+   Native position:sticky — üst öğelerde overflow:hidden OLMAMALIDIR.
+   Tüm kurallar .yr-intro altında kapsüllenmiştir. */
+.yr-intro{
+  --yr-ink:#0e0f15; --yr-paper:#f4f0e6; --yr-bolt:#ffc21a; --yr-muted:#b3aebf; --yr-line:rgba(244,240,230,.2);
+  --yr-display:"Archivo","Arial Black",sans-serif;
+  --yr-body:"Libre Franklin","Franklin Gothic Medium",Arial,sans-serif;
+  --yr-length:1100vh;
+  /* Sitenin sabit öğeleri için boşluk: üstte menü, sol altta WhatsApp butonu. */
+  --yr-nav-clear:96px;
+  --yr-left-clear:92px;
+  position:relative; height:var(--yr-length); background:var(--yr-ink); color:var(--yr-paper);
+  font-family:var(--yr-body); color-scheme:dark; isolation:isolate;
+}
+.yr-intro *,.yr-intro *::before,.yr-intro *::after{box-sizing:border-box}
+.yr-intro p,.yr-intro h1,.yr-intro h2,.yr-intro h3,.yr-intro ul{margin:0;padding:0}
+.yr-intro .yr-stage{position:sticky; top:0; height:100vh; height:100svh; overflow:hidden}
+.yr-intro .yr-canvas{position:absolute; inset:0; width:100%; height:100%; display:block}
+.yr-intro .yr-scrim{position:absolute; left:0; right:0; bottom:0; height:52%; pointer-events:none;
+  background:linear-gradient(to top, rgba(10,10,16,.9) 0%, rgba(10,10,16,.55) 45%, rgba(10,10,16,0) 100%)}
+.yr-intro .yr-pad{padding-left:max(20px, env(safe-area-inset-left,0px)); padding-right:max(20px, env(safe-area-inset-right,0px))}
+
+.yr-intro .yr-eyebrow,.yr-intro .yr-num{font-family:var(--yr-body); font-size:14px; font-weight:600; color:var(--yr-bolt)}
+.yr-intro .yr-title{font-family:var(--yr-display); font-weight:800; font-stretch:118%; text-transform:uppercase; line-height:1;
+  font-size:clamp(34px, 6vw, 96px); letter-spacing:-.012em; text-wrap:balance; margin-top:14px; color:var(--yr-paper)}
+.yr-intro .yr-title span{color:var(--yr-bolt)}
+.yr-intro .yr-title--end{font-size:clamp(28px, 4.6vw, 70px)}
+.yr-intro .yr-lede{margin-top:18px; font-size:clamp(16px,1.6vw,20px); color:var(--yr-muted); font-weight:500}
+
+.yr-intro .yr-hero{position:absolute; left:0; right:0; top:max(var(--yr-nav-clear), clamp(48px, 11vh, 130px)); max-width:1100px; will-change:opacity,transform}
+.yr-intro .yr-hint{margin-top:28px; display:inline-flex; gap:10px; align-items:center; font-size:15px; color:var(--yr-paper);
+  border:1px solid var(--yr-line); padding:9px 14px 9px 12px; border-radius:999px; background:rgba(14,15,21,.55)}
+.yr-intro .yr-arrow{display:inline-block; color:var(--yr-bolt); animation:yr-bob 1.6s ease-in-out infinite}
+@keyframes yr-bob{50%{transform:translateY(4px)}}
+
+.yr-intro .yr-cap{position:absolute; left:0; bottom:clamp(76px, 12vh, 112px); max-width:680px; opacity:0; visibility:hidden; will-change:opacity,transform}
+.yr-intro .yr-h{font-family:var(--yr-display); font-weight:800; font-stretch:118%; text-transform:uppercase; line-height:1; letter-spacing:-.012em;
+  font-size:clamp(32px, 4.8vw, 68px); margin-top:8px; color:var(--yr-paper)}
+.yr-intro .yr-txt{margin-top:12px; font-size:clamp(15px,1.4vw,18px); line-height:1.5; max-width:46ch; color:#e4dfd3}
+.yr-intro .yr-chips{list-style:none; display:flex; flex-wrap:wrap; gap:8px; margin-top:16px}
+.yr-intro .yr-chips li{font-family:var(--yr-body); font-size:13px; font-weight:500; padding:6px 10px;
+  border:1px solid var(--yr-line); border-radius:3px; color:var(--yr-paper); background:rgba(14,15,21,.5)}
+
+.yr-intro .yr-final{position:absolute; left:0; right:0; top:50%; transform:translateY(-50%); max-width:1100px; opacity:0; visibility:hidden}
+.yr-intro .yr-btn{margin-top:28px; font:600 16px/1 var(--yr-body); color:#14130f; background:var(--yr-bolt); border:0;
+  padding:15px 22px; border-radius:4px; cursor:pointer}
+.yr-intro .yr-btn:hover{filter:brightness(1.08)}
+
+.yr-intro .yr-skip{position:absolute; top:max(var(--yr-nav-clear), env(safe-area-inset-top,0px)); right:max(16px, env(safe-area-inset-right,0px));
+  font:500 13px/1 var(--yr-body); color:var(--yr-paper); background:rgba(14,15,21,.6); border:1px solid var(--yr-line);
+  padding:10px 14px; border-radius:999px; cursor:pointer; z-index:1}
+.yr-intro .yr-skip:hover{border-color:var(--yr-bolt)}
+
+.yr-intro .yr-progress{position:absolute; left:0; right:0; bottom:max(18px, env(safe-area-inset-bottom,0px));
+  display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; padding-left:var(--yr-left-clear)}
+.yr-intro .yr-progress button{all:unset; cursor:pointer; display:flex; flex-direction:column; gap:7px; min-width:0}
+.yr-intro .yr-progress span{font-family:var(--yr-body); font-size:13px; font-weight:600;
+  color:var(--yr-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:color .2s}
+.yr-intro .yr-progress button.on span{color:var(--yr-paper)}
+.yr-intro .yr-progress i{display:block; height:3px; background:var(--yr-line); overflow:hidden; border-radius:2px}
+.yr-intro .yr-fill{display:block; height:100%; background:var(--yr-bolt); transform-origin:left; transform:scaleX(0)}
+.yr-intro button:focus-visible{outline:2px solid var(--yr-bolt); outline-offset:3px}
+
+@media (min-width:640px){
+  .yr-intro{--yr-nav-clear:108px; --yr-left-clear:116px}
+}
+@media (max-width:600px){
+  .yr-intro .yr-progress span{font-size:11px}
+  .yr-intro .yr-cap{bottom:70px}
+  .yr-intro .yr-chips li{font-size:12px}
+}
+@media (prefers-reduced-motion:reduce){ .yr-intro .yr-arrow{animation:none} }

@@ -1,298 +1,253 @@
-import { useState, useEffect, useLayoutEffect, useRef } from "react";
-import logoSrc from "../assets/logokeee.png";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import logoSrc from "../assets/logo-mark.webp";
+import { navigateTo } from "../lib/navigate";
+import { gsap, prefersReducedMotion } from "../lib/motion";
+import { navLinks } from "../data/navLinks";
+import { ColorBar, RegMark } from "./ui/Print";
 
-const navLinks = [
-  { label: "Giriş", href: "#anasayfa" },
-  { label: "Hakkımızda", href: "#hakkimizda" },
-  { label: "Hizmetlerimiz", href: "#hizmetlerimiz" },
-  { label: "Kataloglarımız", href: "#kataloglarimiz" },
-  { label: "Referanslarımız", href: "#referanslarimiz" },
-  { label: "İletişim", href: "#iletisim" },
-];
+// One-line summary under each menu entry, keyed by section id.
+const blurbs = {
+  anasayfa: "Atölye turu",
+  hakkimizda: "Biz kimiz, neden biz",
+  hizmetlerimiz: "Tabela · Baskı · Promosyon · Matbaa",
+  kataloglarimiz: "Promosyon ve plaket katalogları",
+  referanslarimiz: "Birlikte çalıştığımız markalar",
+  iletisim: "Ücretsiz keşif ve teklif",
+};
 
-function PhoneIcon({ className }) {
+// Which section currently owns the upper-middle of the viewport.
+function useActiveSection() {
+  const [active, setActive] = useState("anasayfa");
+  useEffect(() => {
+    let raf = 0;
+    const update = () => {
+      raf = 0;
+      const mid = window.innerHeight * 0.45;
+      for (const { id } of navLinks) {
+        const r = document.getElementById(id)?.getBoundingClientRect();
+        if (r && r.top <= mid && r.bottom > mid) {
+          setActive(id);
+          return;
+        }
+      }
+    };
+    const onScroll = () => {
+      if (!raf) raf = requestAnimationFrame(update);
+    };
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      cancelAnimationFrame(raf);
+    };
+  }, []);
+  return active;
+}
+
+function ArrowIcon({ className }) {
   return (
-    <svg className={className} fill="currentColor" viewBox="0 0 24 24">
-      <path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z" />
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14m-6-6l6 6-6 6" />
     </svg>
   );
 }
 
-// Desktop-only navigation: a vertical drum of page names flush to the right
-// edge of the screen. Each label sits on the inside of a 3D cylinder via
-// `rotateX` + `translateZ` — moving away from the active page rotates and
-// recedes it, exactly like a real wheel/picker rather than just a plain
-// slide. Switching the active section (scroll-driven, from Navbar's own
-// scroll listener) re-targets every label's angle at once, so the whole
-// drum visibly spins to bring the new page's name to the front.
-const WHEEL_ANGLE_STEP = 24;
-const WHEEL_RADIUS = 92;
+// Full-screen menu as a yellow print sheet: it drops down from the top edge,
+// then each section slides in as a ruled row of an index table. Hovering a
+// row floods it with ink.
+function MenuSheet({ open, active, onNavigate }) {
+  const ref = useRef(null);
+  const mounted = useRef(false);
 
-function WheelNav({ activeSection, onNavClick }) {
-  const activeIndex = navLinks.findIndex((link) => link.href.replace("#", "") === activeSection);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!mounted.current) {
+      mounted.current = true;
+      gsap.set(el, { clipPath: "inset(0% 0% 100% 0%)", visibility: "hidden" });
+      return;
+    }
+    const k = prefersReducedMotion() ? 0 : 1;
+    const rows = el.querySelectorAll(".menu-row");
+    const extras = el.querySelectorAll(".menu-fade");
+    const tl = gsap.timeline();
+    if (open) {
+      tl.set(el, { visibility: "visible" })
+        .to(el, { clipPath: "inset(0% 0% 0% 0%)", duration: 0.75 * k, ease: "expo.inOut" })
+        .fromTo(
+          rows,
+          { xPercent: -6, autoAlpha: 0 },
+          { xPercent: 0, autoAlpha: 1, duration: 0.8 * k, ease: "expo.out", stagger: 0.06 * k },
+          0.35 * k
+        )
+        .fromTo(extras, { autoAlpha: 0, y: 12 }, { autoAlpha: 1, y: 0, duration: 0.6 * k, ease: "power3.out" }, 0.6 * k);
+    } else {
+      tl.to(el, { clipPath: "inset(0% 0% 100% 0%)", duration: 0.6 * k, ease: "expo.inOut" }).set(el, { visibility: "hidden" });
+    }
+    return () => tl.kill();
+  }, [open]);
+
+  const tab = open ? 0 : -1;
 
   return (
-    <nav
-      className="hidden md:flex fixed top-0 right-0 h-screen w-72 lg:w-80 justify-end z-50 pointer-events-none"
-      style={{ perspective: "900px" }}
-      aria-label="Sayfa navigasyonu"
+    <div
+      ref={ref}
+      id="site-menu"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Site menüsü"
+      aria-hidden={!open}
+      className="fixed inset-0 z-[55] flex flex-col bg-brand text-ink"
     >
-      {navLinks.map((link, i) => {
-        const d = i - activeIndex;
-        const dist = Math.abs(d);
-        const isActive = dist === 0;
-        const visible = dist <= 2;
-        const opacity = visible ? 1 - dist * 0.4 : 0;
-        const scale = 1.15 - dist * 0.22;
+      {["top-4 left-4", "top-4 right-[5.5rem] sm:right-24", "bottom-4 left-4", "bottom-4 right-4"].map((pos) => (
+        <RegMark key={pos} className={`menu-fade absolute ${pos} h-5 w-5 text-ink/50`} />
+      ))}
 
-        return (
-          <a
-            key={link.href}
-            href={link.href}
-            onClick={(e) => onNavClick(e, link.href)}
-            aria-current={isActive ? "true" : undefined}
-            className={`absolute top-28 lg:top-32 right-6 lg:right-10 whitespace-nowrap font-display text-2xl lg:text-3xl transition-all duration-[650ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${
-              isActive ? "font-black text-[#F5A623]" : "font-bold text-white"
-            }`}
-            style={{
-              opacity,
-              pointerEvents: visible ? "auto" : "none",
-              transformOrigin: "right center",
-              transform: `translateY(-50%) rotateX(${-d * WHEEL_ANGLE_STEP}deg) translateZ(${WHEEL_RADIUS}px) scale(${scale})`,
-              filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.55))",
-            }}
-          >
-            {link.label}
+      <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-5 pt-24 pb-6 sm:px-8 sm:pt-28">
+        <div className="menu-fade label flex items-center justify-between border-b border-ink pb-3">
+          <span>
+            <span className="text-ink/50">(Menü)</span> Sayfa dizini
+          </span>
+          <ColorBar />
+        </div>
+
+        <nav aria-label="Menü" className="flex flex-1 flex-col justify-center py-4">
+          <ol>
+            {navLinks.map((link, i) => {
+              const on = active === link.id;
+              return (
+                <li key={link.id} className="menu-row border-b border-ink/25">
+                  <a
+                    href={`#${link.id}`}
+                    tabIndex={tab}
+                    aria-current={on ? "true" : undefined}
+                    onClick={(e) => onNavigate(e, link.id)}
+                    className="group grid grid-cols-[2.25rem_1fr_auto] items-center gap-3 px-1 py-[clamp(0.45rem,1.6vh,1.1rem)] transition-colors duration-300 hover:bg-ink hover:text-brand focus-visible:bg-ink focus-visible:text-brand focus-visible:outline-none sm:grid-cols-[3.5rem_1fr_auto] sm:gap-6 sm:px-3 lg:grid-cols-[3.5rem_1fr_auto_auto]"
+                  >
+                    <span className="label text-ink/50 group-hover:text-brand/70 group-focus-visible:text-brand/70">
+                      0{i + 1}
+                    </span>
+                    <span className="display flex items-center gap-3 text-[clamp(1.1rem,min(5.4vh,5.8vw),3.6rem)] leading-[1.05] transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:translate-x-2">
+                      {link.label}
+                      {on && (
+                        <span className="label hidden rounded-[2px] bg-ink px-2 py-1 text-[0.7rem] normal-case text-brand sm:inline group-hover:bg-brand group-hover:text-ink">
+                          Buradasınız
+                        </span>
+                      )}
+                    </span>
+                    <span className="label hidden text-ink/60 group-hover:text-brand/80 lg:block">{blurbs[link.id]}</span>
+                    <ArrowIcon className="h-5 w-5 transition-transform duration-500 group-hover:-rotate-45 sm:h-6 sm:w-6" />
+                  </a>
+                </li>
+              );
+            })}
+          </ol>
+        </nav>
+
+        <div className="menu-fade grid gap-4 border-t border-ink pt-4 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end sm:gap-8">
+          <a href="mailto:info@yildirimreklam.tr" tabIndex={tab} className="group">
+            <span className="label block text-ink/55">E-posta</span>
+            <span className="font-semibold group-hover:underline">info@yildirimreklam.tr</span>
           </a>
-        );
-      })}
-    </nav>
+          <a
+            href="https://wa.me/905550087921?text=Merhaba%2C%20bilgi%20almak%20istiyorum."
+            target="_blank"
+            rel="noopener noreferrer"
+            tabIndex={tab}
+            className="group"
+          >
+            <span className="label block text-ink/55">WhatsApp</span>
+            <span className="font-semibold group-hover:underline">0555 008 79 21</span>
+          </a>
+          <div className="hidden sm:block">
+            <span className="label block text-ink/55">Çalışma saatleri</span>
+            <span className="font-semibold">Pzt – Cmt · 08:00 – 18:00</span>
+          </div>
+          <a href="#iletisim" tabIndex={tab} onClick={(e) => onNavigate(e, "iletisim")} className="btn btn-ink justify-between">
+            Teklif Al <ArrowIcon className="btn-arrow h-4 w-4" />
+          </a>
+        </div>
+      </div>
+    </div>
   );
 }
 
 export default function Navbar() {
-  const [activeSection, setActiveSection] = useState("anasayfa");
-  const [scrolled, setScrolled] = useState(false);
+  const active = useActiveSection();
   const [menuOpen, setMenuOpen] = useState(false);
-  const sectionOffsetsRef = useRef({});
-
-  // Cache each section's true document offset once, up front, instead of
-  // reading it live at click time. Catalogs/References sit inside
-  // `position: sticky` wrappers roughly one viewport tall — once the page
-  // has been scrolled past one of those, Chromium can keep reporting its
-  // offsetTop/getBoundingClientRect as if it were still stuck at the top,
-  // even though it's actually far above. Measuring "up front" isn't enough
-  // on its own, though: browsers restore the previous scroll position on
-  // reload, so if the page reloads while already scrolled past these
-  // sections, this very effect would run with the corruption already in
-  // effect and cache the wrong numbers. Forcing scrollY to 0 immediately
-  // before measuring (and restoring it right after, all inside a layout
-  // effect so it never paints) guarantees a clean read no matter where the
-  // page happened to start.
-  useLayoutEffect(() => {
-    const measure = () => {
-      const restoreY = window.scrollY;
-      if (restoreY !== 0) window.scrollTo(0, 0);
-
-      const offsets = {};
-      for (const link of navLinks) {
-        const id = link.href.replace("#", "");
-        const el = document.getElementById(id);
-        if (!el) continue;
-        let top = 0;
-        for (let node = el; node; node = node.offsetParent) {
-          top += node.offsetTop;
-        }
-        offsets[id] = top;
-      }
-      sectionOffsetsRef.current = offsets;
-
-      if (restoreY !== 0) window.scrollTo(0, restoreY);
-    };
-    measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  }, []);
+  const buttonRef = useRef(null);
 
   useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
-
-      // "Active" = whichever section is most visibly dominant right now,
-      // not just whichever one's top edge crosses a fixed line. A plain
-      // rect.top threshold broke once sections started shrinking+fading out
-      // via usePinnedPanel's scale transform: scaling down from its own
-      // center pushes an outgoing panel's top edge *down* as it shrinks
-      // (toward, or even past, that threshold) while it's simultaneously
-      // going transparent — so a half-size, half-faded outgoing section
-      // could still "win" over the next section already filling the
-      // screen underneath it. Weighting each section's viewport overlap by
-      // its current opacity picks the one actually dominating the view.
-      const vh = window.innerHeight;
-      let bestId = null;
-      let bestScore = 0;
-      for (const link of navLinks) {
-        const id = link.href.replace("#", "");
-        const el = document.getElementById(id);
-        if (!el) continue;
-        const rect = el.getBoundingClientRect();
-        const overlap = Math.min(rect.bottom, vh) - Math.max(rect.top, 0);
-        if (overlap <= 0) continue;
-        const opacity = parseFloat(getComputedStyle(el).opacity || "1");
-        const score = overlap * opacity;
-        if (score > bestScore) {
-          bestScore = score;
-          bestId = id;
-        }
-      }
-      if (bestId) setActiveSection(bestId);
-    };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  // Lock the page behind the full-screen mobile menu, and let Escape close
-  // it like any other modal overlay.
-  useEffect(() => {
-    document.body.style.overflow = menuOpen ? "hidden" : "";
     if (!menuOpen) return;
-    const onKeyDown = (e) => {
-      if (e.key === "Escape") setMenuOpen(false);
-    };
+    const button = buttonRef.current;
+    document.body.style.overflow = "hidden";
+    const onKeyDown = (e) => e.key === "Escape" && setMenuOpen(false);
     window.addEventListener("keydown", onKeyDown);
     return () => {
       document.body.style.overflow = "";
       window.removeEventListener("keydown", onKeyDown);
+      // Return focus to the menu button once the sheet closes.
+      button?.focus({ preventScroll: true });
     };
   }, [menuOpen]);
 
-  const handleNavClick = (e, href) => {
+  const handleNavigate = (e, id) => {
     e.preventDefault();
-    const id = href.replace("#", "");
-    // "Giriş" always means the very top of the page. Scrolling straight to
-    // it (rather than scrollIntoView-ing the Hero section) sidesteps About
-    // and Services' scroll-jacked pin logic, which can otherwise leave a
-    // fixed-position panel from a later section still covering Hero for a
-    // moment while the smooth scroll settles.
-    if (id === "anasayfa") {
-      window.scrollTo({ top: 0, behavior: "smooth" });
+    if (menuOpen) {
+      setMenuOpen(false);
+      // Let the sheet start lifting before the page curtain takes over.
+      setTimeout(() => navigateTo(id), 250);
     } else {
-      const top = sectionOffsetsRef.current[id];
-      if (top != null) {
-        window.scrollTo({ top, behavior: "smooth" });
-      }
+      navigateTo(id);
     }
-    setMenuOpen(false);
   };
 
   return (
     <>
-      <WheelNav activeSection={activeSection} onNavClick={handleNavClick} />
-      <header className="md:hidden fixed top-0 left-0 right-0 z-50 flex justify-center pt-4 px-4">
-        {/* Full-screen mobile menu — mounted always so both the open and close
-            transitions animate; only interactive/visible while menuOpen. */}
-        <div
-          className="md:hidden fixed inset-0 bg-[#F5A623]"
-          style={{
-            opacity: menuOpen ? 1 : 0,
-            transform: menuOpen ? "scale(1)" : "scale(0.96)",
-            pointerEvents: menuOpen ? "auto" : "none",
-            transition: menuOpen
-              ? "opacity 400ms cubic-bezier(0.16,1,0.3,1), transform 400ms cubic-bezier(0.16,1,0.3,1)"
-              : "opacity 300ms ease-in, transform 300ms ease-in",
-          }}
-        >
-          <div className="h-full flex flex-col justify-center px-8 sm:px-12">
-            <nav className="flex flex-col">
-              {navLinks.map((link, i) => {
-                const isActive = activeSection === link.href.replace("#", "");
-                return (
-                  <a
-                    key={link.href}
-                    href={link.href}
-                    onClick={(e) => handleNavClick(e, link.href)}
-                    className="group flex items-baseline gap-3 sm:gap-4 py-2.5 sm:py-3"
-                    style={{
-                      transition: "transform 500ms cubic-bezier(0.16,1,0.3,1), opacity 500ms ease",
-                      transitionDelay: menuOpen ? `${i * 60}ms` : "0ms",
-                      transform: menuOpen ? "translateY(0)" : "translateY(20px)",
-                      opacity: menuOpen ? 1 : 0,
-                    }}
-                  >
-                    <span
-                      className={`font-display text-sm sm:text-base font-bold tabular-nums text-[#1A1A1A] ${
-                        isActive ? "opacity-00" : "opacity-40"
-                      }`}
-                    >
-                      0{i + 1}
-                    </span>
-                    <span className="font-display text-4xl sm:text-5xl font-black tracking-tight text-[#1A1A1A] transition-transform duration-300 group-hover:translate-x-2">
-                      {link.label}
-                    </span>
-                  </a>
-                );
-              })}
-            </nav>
+      <MenuSheet open={menuOpen} active={active} onNavigate={handleNavigate} />
 
-            {/* Wrapper owns the menu-open slide/fade (its own inline
-                transform); btn-neu on the <a> owns its independent hover
-                tilt — combining both on one element would mean the inline
-                style silently wins and the tilt never applies. */}
-            <div
-              className="mt-10 sm:mt-12 self-start"
-              style={{
-                transition: "transform 500ms cubic-bezier(0.16,1,0.3,1), opacity 500ms ease",
-                transitionDelay: menuOpen ? `${navLinks.length * 60}ms` : "0ms",
-                transform: menuOpen ? "translateY(0)" : "translateY(20px)",
-                opacity: menuOpen ? 1 : 0,
-              }}
-            >
-              <a
-                href="tel:05324457997"
-                className="btn-neu inline-flex items-center gap-2 bg-[#F8F8F8] hover:bg-white text-[#1A1A1A] font-bold text-base px-6 py-3"
-              >
-                <PhoneIcon className="w-4 h-4" />
-                0555 008 79 21
-              </a>
-            </div>
-          </div>
-        </div>
+      {/* Two floating pieces instead of a full bar: logo chip (left) and the
+          always-visible menu button (right). */}
+      <a
+        href="#anasayfa"
+        onClick={(e) => handleNavigate(e, "anasayfa")}
+        aria-label="Yıldırım Reklam Ajansı — başa dön"
+        className="fixed left-3 top-3 z-[60] flex h-14 items-center rounded-[3px] bg-ink/92 px-3.5 shadow-[0_18px_40px_-24px_rgba(0,0,0,0.6)] backdrop-blur-md sm:left-5 sm:top-5 sm:h-16 sm:px-4"
+      >
+        <img src={logoSrc} alt="" className="h-8 w-auto object-contain sm:h-9" />
+      </a>
 
-        {/* Mobile-only bar: logo + hamburger trigger for the full-screen menu
-            above. Desktop navigation lives entirely in WheelNav now. */}
-        <nav
-          className={`relative z-10 w-full max-w-5xl transition-all duration-300 px-5 sm:px-7 py-2 sm:py-2.5 flex items-center justify-between ring-1 border-b-2 border-[#F5A623]/70 ${
-            scrolled
-              ? "bg-[#1A1A1A]/95 backdrop-blur-md ring-white/10 shadow-xl shadow-black/30"
-              : "bg-[#1A1A1A]/70 backdrop-blur-md ring-white/5"
+      <div className="fixed right-3 top-3 z-[60] flex items-center gap-2 sm:right-5 sm:top-5">
+        <a
+          href="#iletisim"
+          onClick={(e) => handleNavigate(e, "iletisim")}
+          className={`btn btn-brand hidden h-16 transition-opacity duration-300 sm:inline-flex ${
+            menuOpen ? "pointer-events-none opacity-0" : "opacity-100"
           }`}
+          tabIndex={menuOpen ? -1 : 0}
         >
-          {/* Logo */}
-          <a
-            href="#anasayfa"
-            onClick={(e) => handleNavClick(e, "#anasayfa")}
-            className="flex items-center flex-shrink-0"
-          >
-            <img
-              src={logoSrc}
-              alt="Yıldırım Reklam Ajansı"
-              className="h-20 sm:h-24 w-auto object-contain"
-            />
-          </a>
-
-          {/* Mobile menu toggle */}
-          <button
-            onClick={() => setMenuOpen((v) => !v)}
-            className="relative z-10 flex flex-col justify-center items-center w-9 h-9 gap-1.5 bg-white/10 hover:bg-white/20 transition-colors"
-            aria-label={menuOpen ? "Menüyü kapat" : "Menüyü aç"}
-            aria-expanded={menuOpen}
-          >
-            <span className={`block w-5 h-0.5 bg-white transition-all duration-300 ${menuOpen ? "rotate-45 translate-y-2" : ""}`} />
-            <span className={`block w-5 h-0.5 bg-white transition-all duration-300 ${menuOpen ? "opacity-0" : ""}`} />
-            <span className={`block w-5 h-0.5 bg-white transition-all duration-300 ${menuOpen ? "-rotate-45 -translate-y-2" : ""}`} />
-          </button>
-        </nav>
-      </header>
+          Teklif Al
+        </a>
+        <button
+          ref={buttonRef}
+          type="button"
+          onClick={() => setMenuOpen((v) => !v)}
+          aria-label={menuOpen ? "Menüyü kapat" : "Menüyü aç"}
+          aria-expanded={menuOpen}
+          aria-controls="site-menu"
+          className="group relative flex h-14 w-14 items-center justify-center rounded-[3px] bg-ink text-brand shadow-[0_18px_40px_-24px_rgba(0,0,0,0.6)] ring-1 ring-paper/10 transition-transform duration-300 hover:scale-[1.04] focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-ink sm:h-16 sm:w-16"
+        >
+          <span
+            className={`absolute h-[2px] w-6 bg-current transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+              menuOpen ? "rotate-45" : "-translate-y-[5px] group-hover:-translate-y-[6px]"
+            }`}
+          />
+          <span
+            className={`absolute h-[2px] bg-current transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+              menuOpen ? "w-6 -rotate-45" : "w-6 translate-y-[5px] group-hover:translate-y-[6px] sm:w-4 sm:translate-x-1"
+            }`}
+          />
+        </button>
+      </div>
     </>
   );
 }

@@ -1,0 +1,55 @@
+/* Yatay akan tek cadde: sabah müşteride ölçü, stüdyoda tasarım, atölyede
+   üretim, akşam aynı dükkânda montaj. Bölüm --ys-length boyunca uzun; sahne
+   ekrana yapışır (native position:sticky) ve kaydırma zaman çizelgesini
+   ilerletir. Üst öğelerde overflow:hidden OLMAMALIDIR. */
+.yr-steps{
+  --ys-ink:#0e0f15; --ys-paper:#f4f0e6; --ys-bolt:#ffc21a; --ys-muted:#c9c4d0; --ys-line:rgba(244,240,230,.22);
+  --ys-display:"Archivo","Arial Black",sans-serif;
+  --ys-body:"Libre Franklin","Franklin Gothic Medium",Arial,sans-serif;
+  --ys-length:650vh;
+  /* Sitenin sabit öğeleri için boşluk: üstte menü, sol altta WhatsApp. */
+  --ys-nav-clear:92px;
+  --ys-left-clear:92px;
+  position:relative; height:var(--ys-length); background:var(--ys-ink); color:var(--ys-paper);
+  font-family:var(--ys-body); color-scheme:dark; isolation:isolate;
+}
+.yr-steps *,.yr-steps *::before,.yr-steps *::after{box-sizing:border-box}
+.yr-steps p,.yr-steps h3{margin:0}
+.yr-steps .yrs-stage{position:sticky; top:0; height:100vh; height:100svh; overflow:hidden}
+.yr-steps .yrs-canvas{position:absolute; inset:0; width:100%; height:100%; display:block}
+.yr-steps .yrs-scrim{position:absolute; inset:0; pointer-events:none;
+  background:linear-gradient(90deg, rgba(9,9,14,.84) 0%, rgba(9,9,14,.55) 24%, rgba(9,9,14,0) 48%),
+             linear-gradient(to top, rgba(9,9,14,.78) 0%, rgba(9,9,14,0) 20%)}
+.yr-steps .yrs-pad{padding-left:max(24px, env(safe-area-inset-left,0px)); padding-right:max(24px, env(safe-area-inset-right,0px))}
+.yr-steps .yrs-eyebrow{position:absolute; left:0; top:var(--ys-nav-clear); font-family:var(--ys-body); font-size:14px; font-weight:600; color:var(--ys-bolt)}
+
+.yr-steps .yrs-cap{position:absolute; left:0; top:0; bottom:0; width:min(46vw, 600px); display:flex; flex-direction:column; justify-content:center;
+  opacity:0; visibility:hidden; will-change:opacity,transform}
+.yr-steps .yrs-num{font-family:var(--ys-display); font-weight:800; font-stretch:118%; font-size:clamp(56px, 6.4vw, 96px); line-height:1; color:transparent;
+  -webkit-text-stroke:2px var(--ys-bolt); letter-spacing:-.01em}
+.yr-steps .yrs-h{font-family:var(--ys-display); font-weight:800; font-stretch:118%; text-transform:uppercase; font-size:clamp(28px, 3.5vw, 54px); line-height:1.04; letter-spacing:-.012em; margin-top:14px; text-wrap:balance; color:var(--ys-paper)}
+.yr-steps .yrs-txt{margin-top:14px; font-size:clamp(16px, 1.45vw, 20px); line-height:1.5; max-width:30ch; color:#ebe6da}
+
+.yr-steps .yrs-progress{position:absolute; left:0; right:0; bottom:max(18px, env(safe-area-inset-bottom,0px)); display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:12px;
+  padding-left:max(var(--ys-left-clear), env(safe-area-inset-left,0px))}
+.yr-steps .yrs-progress button{all:unset; cursor:pointer; display:flex; flex-direction:column; gap:8px; min-width:0}
+.yr-steps .yrs-progress span{font-family:var(--ys-body); font-size:13px; font-weight:600; color:var(--ys-muted);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:color .2s}
+.yr-steps .yrs-progress span b{color:var(--ys-bolt); font-weight:700; margin-right:4px}
+.yr-steps .yrs-progress button.on span{color:var(--ys-paper)}
+.yr-steps .yrs-progress i{display:block; height:3px; background:var(--ys-line); overflow:hidden; border-radius:2px}
+.yr-steps .yrs-fill{display:block; height:100%; background:var(--ys-bolt); transform-origin:left; transform:scaleX(0)}
+.yr-steps button:focus-visible{outline:2px solid var(--ys-bolt); outline-offset:3px}
+
+@media (min-width:640px){
+  .yr-steps{--ys-nav-clear:104px; --ys-left-clear:116px}
+}
+@media (max-width:760px){
+  .yr-steps .yrs-scrim{background:linear-gradient(to top, rgba(9,9,14,.92) 0%, rgba(9,9,14,.72) 34%, rgba(9,9,14,0) 58%)}
+  .yr-steps .yrs-cap{top:auto; bottom:84px; width:auto; right:0; justify-content:flex-end}
+  .yr-steps .yrs-num{font-size:46px}
+  .yr-steps .yrs-h{font-size:28px; margin-top:8px}
+  .yr-steps .yrs-txt{font-size:16px; margin-top:8px}
+  .yr-steps .yrs-progress span{font-size:11px}
+  .yr-steps .yrs-progress span b{display:block; margin:0 0 2px}
+}

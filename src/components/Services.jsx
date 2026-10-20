@@ -1,6 +1,9 @@
-import { useEffect, useRef, useState } from "react";
-import { usePinnedPanel } from "../hooks/usePinnedPanel";
-
+import { useRef, useState } from "react";
+import { useReveal } from "../lib/motion";
+import { navigateTo } from "../lib/navigate";
+import { SplitText } from "./ui/SplitText";
+import { RegMark, SectionHead } from "./ui/Print";
+import Process from "./Process/Process";
 
 import kartvizit from "../assets/services/kartvizit.png";
 import bloknot  from "../assets/services/bloknot.png";
@@ -47,10 +50,9 @@ import display7 from "../assets/services/display7.png";
 import display8 from "../assets/services/display8.png";
 
 
-// Four service groups, each its own full screen. Every item carries its own
+// Service groups, browsed in the index on the left. Every item carries its own
 // `image` — swap the import at the top and the value on any entry any time
-// a more accurate photo exists for that specific item (only 4 real photos
-// exist today, so they're cycled across each group's items for now).
+// a more accurate photo exists for that specific item.
 const serviceGroups = [
   {
     id: "tabela",
@@ -134,668 +136,147 @@ const serviceGroups = [
   },
 ];
 
-const process = [
-  { step: "01", title: "İhtiyaç Analizi", desc: "İşletmenizin ihtiyaçlarını yerinde analiz ediyoruz." },
-  { step: "02", title: "Tasarım", desc: "Profesyonel ekibimiz özel tasarımınızı hazırlıyor." },
-  { step: "03", title: "Üretim", desc: "Kaliteli malzeme ve ekipmanlarla üretim yapıyoruz." },
-  { step: "04", title: "Montaj & Teslimat", desc: "Yerinde montaj ve sorunsuz teslimat sağlıyoruz." },
-];
-
-function easeInOutCubic(t) {
-  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-}
-
-function clamp(v, min, max) {
-  return Math.min(max, Math.max(min, v));
-}
-
-// Splits a 0..1 progress value across a list of relative weights — used
-// both for the section's four top-level stages and for the seven dwell/pan
-// phases inside the service-groups stage.
-function resolveWeightedSegment(progress, weights) {
-  const cum = weights.reduce((acc, w) => [...acc, acc[acc.length - 1] + w], [0]);
-  const total = cum[cum.length - 1];
-  const pos = clamp(progress, 0, 1) * total;
-  let index = cum.findIndex((_, i) => i < cum.length - 1 && pos < cum[i + 1]);
-  if (index === -1) index = weights.length - 1;
-  const local = clamp((pos - cum[index]) / weights[index], 0, 1);
-  return { index, local };
-}
-
-// Fades a stage in/out over the edges of its own segmentLocal (0..1). Skip
-// fadeIn for the very first stage (already visible at scroll position 0)
-// and fadeOut for the very last (it just settles once scroll-jacking ends).
-// fadeInEdge/fadeOutEdge let a stage fade in faster than it fades out (or
-// vice versa) — both default to `edge` when not given separately.
-function stageOpacity(local, { fadeIn = true, fadeOut = true, edge = 0.12, fadeInEdge, fadeOutEdge } = {}) {
-  const inEdge = fadeInEdge ?? edge;
-  const outEdge = fadeOutEdge ?? edge;
-  let o = 1;
-  if (fadeIn) o = Math.min(o, easeInOutCubic(clamp(local / inEdge, 0, 1)));
-  if (fadeOut) o = Math.min(o, 1 - easeInOutCubic(clamp((local - (1 - outEdge)) / outEdge, 0, 1)));
-  return o;
-}
-
-// Reveal thresholds (fraction of the rail's fill progress) at which each
-// process step's card pops in — evenly spaced with a small lead-in so the
-// card arrives just as the growing line reaches its marker.
-const TIMELINE_THRESHOLDS = [0.08, 0.36, 0.64, 0.92];
+const pad2 = (n) => String(n).padStart(2, "0");
 
 function ArrowIcon({ className }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14m-6-6l6 6-6 6" />
     </svg>
   );
 }
 
-// Same "keep scrolling" chevron cue used at the bottom of the Hero and
-// "Neden Biz?" screens — pinned to the very bottom of the stage, independent
-// of wherever that stage's own text happens to sit, so it reads as a
-// section-wide cue rather than part of the copy above it.
-function ScrollHintChevrons({ opacity }) {
+const go = (id) => (e) => {
+  e.preventDefault();
+  navigateTo(id);
+};
+
+// Group index: a ruled vertical list on desktop (sticky beside the grid),
+// a horizontal scroller of tabs on mobile.
+function GroupIndex({ active, onSelect }) {
   return (
-    <div
-      className="absolute inset-x-0 bottom-6 sm:bottom-8 flex flex-col items-center pointer-events-none"
-      style={{ opacity }}
-      aria-hidden="true"
-    >
-      {[0, 1, 2].map((i) => (
-        <svg
-          key={i}
-          viewBox="0 0 24 12"
-          className="w-6 sm:w-7 md:w-8 scroll-chevron"
-          style={{ marginTop: i === 0 ? 0 : "-0.4em", animationDelay: `${i * 0.6}s` }}
-        >
-          <path
-            d="M2 10L12 2L22 10"
-            fill="none"
-            stroke="#F5A623"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      ))}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Stage 1: Hero intro
-// ---------------------------------------------------------------------------
-function HeroStage({ opacity }) {
-  return (
-    <>
-      <div className="absolute inset-0 flex items-center justify-center px-5 sm:px-8" style={{ opacity }}>
-        <div className="max-w-3xl mx-auto text-center services-hero-reveal">
-          <span className="inline-block text-[#F5A623] text-xs sm:text-sm font-bold tracking-[0.25em] uppercase mb-5">
-            Hizmetlerimiz
-          </span>
-          <h2 className="font-display text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-white leading-[1.15] mb-6">
-            Markanızı <span className="text-[#F5A623]">görünür kılan</span> üretimler gerçekleştiriyoruz.
-          </h2>
-          <p className="text-white/60 text-base sm:text-lg leading-relaxed max-w-xl mx-auto">
-            Fikirden üretime, uygulamadan montaja kadar markanızın fiziksel dünyadaki tüm
-            görünürlük ihtiyaçlarını profesyonel çözümlerle hayata geçiriyoruz.
-          </p>
-        </div>
-      </div>
-      <ScrollHintChevrons opacity={opacity} />
-    </>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Stage 2: one full screen per service group, stacked top-to-bottom and
-// navigated by a single continuous upward scroll — the backdrop stays put
-// while each group's own text+photo panel slides up and the next group's
-// panel rises in from below, like scrubbing a video rather than jumping
-// between slides. The offset is a continuous function of scroll progress
-// (smoothed further upstream by the RAF lerp on the section's pin
-// progress), so scrolling fast just fast-forwards through the same motion —
-// it can never skip a group outright. Within a group, though, its items
-// don't advance on scroll at all — the user taps/clicks one to see it,
-// exactly like a small accordion — so scroll is reserved entirely for
-// moving between groups.
-// ---------------------------------------------------------------------------
-function ServiceGroupRow({ number, title, isActive, interactive, onSelect }) {
-  return (
-    <button
-      type="button"
-      tabIndex={interactive ? 0 : -1}
-      onClick={interactive ? onSelect : undefined}
-      aria-current={isActive ? "true" : undefined}
-      className={`group relative w-full text-left py-4 sm:py-5 border-b border-white/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F5A623] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0D0D0D] ${
-        interactive ? "cursor-pointer" : "pointer-events-none"
-      }`}
-    >
-      <span className="flex items-center gap-4 sm:gap-6">
-        <span
-          className={`font-display text-sm sm:text-base font-bold tabular-nums flex-shrink-0 transition-colors duration-300 ${
-            isActive ? "text-[#F5A623]" : "text-white/35"
-          }`}
-        >
-          {number}
-        </span>
-        <span
-          className={`flex-1 font-display font-black leading-snug transition-all duration-300 text-lg sm:text-xl lg:text-2xl group-hover:translate-x-2 ${
-            isActive ? "text-white translate-x-2" : "text-white/40"
-          }`}
-        >
-          {title}
-        </span>
-        <span className="relative flex-shrink-0 w-5 h-5 flex items-center justify-center">
-          <ArrowIcon
-            className={`w-5 h-5 transition-all duration-300 group-hover:translate-x-1 ${
-              isActive ? "text-[#F5A623] translate-x-1" : "text-white/25"
-            }`}
-          />
-        </span>
-      </span>
-      <span
-        className="absolute left-0 bottom-0 h-px bg-[#F5A623] transition-[width] duration-500 ease-out"
-        style={{ width: isActive ? "100%" : "0%" }}
-      />
-    </button>
-  );
-}
-
-// A small pulsing "tap here" ripple — a solid dot with an expanding, fading
-// ring looping via Tailwind's built-in ping animation — shown only on the
-// very first item of the very first group, until the user taps anything.
-// Onboarding hint, not app state: nothing about it is scroll- or click-timed
-// beyond "has the user ever tapped an item yet."
-function TapHint({ className = "" }) {
-  return (
-    <span className={`pointer-events-none inline-flex ${className}`} aria-hidden="true">
-      <span className="absolute inset-0 bg-[#F5A623] opacity-75 animate-ping" />
-      <span className="relative inline-flex w-full h-full bg-[#F5A623]" />
-    </span>
-  );
-}
-
-// A single item's photo, stacked with its siblings and crossfaded in/out —
-// all of a group's item images are always mounted so switching the active
-// one (a discrete tap, on both desktop and mobile) is a pure opacity/scale
-// change with a short eased transition, never a swap that could flash.
-function ServiceItemVisual({ image, label, opacity }) {
-  return (
-    <img
-      src={image}
-      alt={`${label} uygulama örneği`}
-      aria-hidden={opacity > 0.5 ? undefined : true}
-      className="absolute inset-0 w-full h-full object-cover transition-all duration-500 ease-out"
-      style={{ opacity, transform: `scale(${1.06 - opacity * 0.06})` }}
-    />
-  );
-}
-
-// One group's own screen: its title, its items as a numbered/underlined
-// list, and each item's own photo crossfading in as it becomes active.
-// `isCurrentGroup` is true only while the pan is dwelling on this exact
-// group — everywhere else its list is present (so the pan has something to
-// slide) but inert (not focusable/hoverable/tappable) and frozen on the
-// first item.
-//
-// Item selection is `activeItemIndex`/`onSelectItem` (owned by the parent
-// stage) on both desktop and mobile — only the *control* differs: a
-// numbered tappable list on desktop, prev/next arrows + tappable dots
-// overlaid on the photo on mobile. Item switching used to be scroll/swipe
-// driven on mobile (a continuous crossfade tied to scroll position), but a
-// fast flick could blow through every item in a group in an instant with no
-// way to tell what had just happened — an explicit tap target, identical to
-// desktop's model, means how fast someone scrolls can no longer skip
-// content past them.
-function ServiceGroupPanel({ group, isCurrentGroup, activeItemIndex, onSelectItem, showTapHint }) {
-  const items = group.items;
-  const effectiveIndex = activeItemIndex;
-  const activeItem = items[effectiveIndex];
-  const visualOpacity = (i) => (i === effectiveIndex ? 1 : 0);
-
-  const goTo = (i) => onSelectItem((i + items.length) % items.length);
-
-  return (
-    <div className="w-full h-full flex items-center px-5 sm:px-8 md:px-10 lg:px-16">
-      <div className="w-full max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-6 md:gap-14">
-        <div className="w-full md:w-[46%]">
-          <span className="inline-block text-[#F5A623] text-xs font-bold tracking-[0.2em] uppercase mb-3 md:mb-6">
-            Hizmetlerimiz
-          </span>
-          <h3 className="font-display text-3xl sm:text-4xl md:text-5xl font-black text-white mb-4 md:mb-6 leading-tight">
-            {group.title}
-          </h3>
-
-          {/* Desktop: numbered, tappable list of this group's items */}
-          <div className="hidden md:block">
-            {items.map((item, i) => (
-              <ServiceGroupRow
-                key={item.label}
-                number={`0${i + 1}`}
-                title={item.label}
-                isActive={i === effectiveIndex}
-                interactive={isCurrentGroup}
-                onSelect={() => onSelectItem(i)}
-              />
-            ))}
-          </div>
-
-        </div>
-
-        <div className="w-full md:w-[54%] translate-x-2 sm:translate-x-3 md:translate-x-5">
-          <div className="media-frame-neu w-full aspect-[16/9] md:aspect-[16/11] bg-[#171717]">
-            {items.map((item, i) => (
-              <ServiceItemVisual key={item.label} image={item.image} label={item.label} opacity={visualOpacity(i)} />
-            ))}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/5 to-transparent pointer-events-none" />
-            <div className="absolute bottom-0 left-0 p-6 sm:p-8">
-              <div className="font-display font-black text-3xl sm:text-4xl text-[#F5A623] mb-1.5">
-                0{effectiveIndex + 1}
-              </div>
-              <p className="text-white/85 text-sm sm:text-base">{activeItem.label}</p>
-            </div>
-          </div>
-
-          {/* Prev/next + dots, centered under the photo, on both desktop and
-              mobile — the same btn-neu shell (thick border, hard shadow, 3D
-              pop) as every other button on the site, so "how do I move to
-              the next photo" reads as an obvious, self-explanatory control
-              instead of something to be discovered by scrolling or hunting
-              the list. Desktop keeps its list too (still the fastest way to
-              jump straight to a specific item by name); this row is the
-              quick, universal next/prev. */}
-          <div className="relative flex items-center justify-center gap-4 mt-5">
-            <button
-              type="button"
-              tabIndex={isCurrentGroup ? 0 : -1}
-              onClick={() => goTo(effectiveIndex - 1)}
-              aria-label={`Önceki: ${items[(effectiveIndex - 1 + items.length) % items.length].label}`}
-              className={`btn-neu flex items-center justify-center w-11 h-11 flex-shrink-0 bg-[#F5A623] hover:bg-white text-[#1A1A1A] focus:outline-none focus-visible:ring-2 focus-visible:ring-white ${
-                isCurrentGroup ? "" : "pointer-events-none"
-              }`}
-            >
-              <ArrowIcon className="w-5 h-5 rotate-180" />
-            </button>
-
-            <div className="flex items-center gap-2.5">
-              {items.map((item, i) => (
-                <button
-                  key={item.label}
-                  type="button"
-                  tabIndex={isCurrentGroup ? 0 : -1}
-                  onClick={() => onSelectItem(i)}
-                  aria-label={item.label}
-                  aria-current={i === effectiveIndex ? "true" : undefined}
-                  className={`h-2.5 rounded-full transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F5A623] ${
-                    i === effectiveIndex ? "w-7 bg-[#F5A623]" : "w-2.5 bg-white/25"
-                  } ${isCurrentGroup ? "" : "pointer-events-none"}`}
-                />
-              ))}
-            </div>
-
-            <div className="relative flex-shrink-0">
+    <nav aria-label="Hizmet grupları" className="lg:sticky lg:top-28 -mx-5 px-5 sm:mx-0 sm:px-0 overflow-x-auto no-scrollbar">
+      <ul className="flex gap-2 lg:flex-col lg:gap-0 lg:border-t lg:border-ink">
+        {serviceGroups.map((g, i) => {
+          const on = i === active;
+          return (
+            <li key={g.id} className="shrink-0">
               <button
                 type="button"
-                tabIndex={isCurrentGroup ? 0 : -1}
-                onClick={() => goTo(effectiveIndex + 1)}
-                aria-label={`Sonraki: ${items[(effectiveIndex + 1) % items.length].label}`}
-                className={`btn-neu flex items-center justify-center w-11 h-11 bg-[#F5A623] hover:bg-white text-[#1A1A1A] focus:outline-none focus-visible:ring-2 focus-visible:ring-white ${
-                  isCurrentGroup ? "" : "pointer-events-none"
+                onClick={() => onSelect(i)}
+                aria-pressed={on}
+                className={`w-full flex items-center gap-4 text-left border px-4 py-3 lg:border-0 lg:border-b lg:px-3 lg:py-4 transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-ink focus-visible:-outline-offset-2 ${
+                  on ? "bg-ink text-paper border-ink" : "border-ink/15 hover:bg-paper-2"
                 }`}
               >
-                <ArrowIcon className="w-5 h-5" />
+                <span className={`label ${on ? "text-brand" : "text-ink/40"}`}>{pad2(i + 1)}</span>
+                <span className="display flex-1 whitespace-nowrap text-lg lg:text-[1.2rem]">{g.title}</span>
+                <span className={`label hidden lg:inline ${on ? "text-paper/55" : "text-ink/40"}`}>{pad2(g.items.length)}</span>
               </button>
-              {showTapHint && <TapHint className="absolute -top-1 -right-1 w-3 h-3" />}
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
+  );
+}
+
+// One product photo with a caption; crop marks appear on hover.
+function ItemTile({ item, index }) {
+  return (
+    <figure className="tile-in group crop crop-hover" style={{ animationDelay: `${index * 55}ms` }}>
+      <div className="relative aspect-[4/3] overflow-hidden bg-paper-2">
+        <img
+          src={item.image}
+          alt={`${item.label} uygulama örneği`}
+          loading="lazy"
+          className="absolute inset-0 h-full w-full object-cover transition-transform duration-[1200ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.06]"
+        />
+      </div>
+      <figcaption className="flex items-baseline justify-between gap-3 border-b border-ink/15 py-3">
+        <span className="text-sm sm:text-base font-semibold leading-tight">{item.label}</span>
+        <span className="label text-ink/40">{pad2(index + 1)}</span>
+      </figcaption>
+    </figure>
+  );
+}
+
+export default function Services() {
+  const [active, setActive] = useState(0);
+  const group = serviceGroups[active];
+  const total = serviceGroups.reduce((n, g) => n + g.items.length, 0);
+
+  const ctaRef = useRef(null);
+  useReveal(ctaRef, { y: 0 });
+
+  return (
+    <section id="hizmetlerimiz" className="relative border-t border-ink/10 bg-sheet pt-24 sm:pt-36">
+      <div className="mx-auto max-w-7xl px-5 sm:px-8">
+        <SectionHead index="02" label="Hizmetlerimiz" aside={`${serviceGroups.length} grup · ${total} ürün`} />
+
+        <div className="mt-12 sm:mt-16 grid gap-8 lg:grid-cols-12 lg:items-end">
+          <SplitText
+            className="lg:col-span-8 display text-[2.3rem] sm:text-[4.2rem] lg:text-[5.4rem]"
+            parts={[{ text: "Markanızı " }, { text: "görünür", className: "mark" }, { text: " kılan üretimler." }]}
+          />
+          <p className="lg:col-span-4 text-ink/65 leading-relaxed lg:pb-3">
+            Fikirden üretime, uygulamadan montaja kadar markanızın fiziksel dünyadaki tüm görünürlük ihtiyaçlarını
+            profesyonel çözümlerle hayata geçiriyoruz.
+          </p>
+        </div>
+
+        <div className="mt-16 sm:mt-24 grid gap-8 lg:grid-cols-[300px_1fr] lg:gap-14">
+          <div className="min-w-0">
+            <GroupIndex active={active} onSelect={setActive} />
+          </div>
+
+          <div className="min-w-0">
+            <div className="flex items-end justify-between gap-4 border-b border-ink pb-4">
+              <h3 key={group.id} className="tile-in display text-3xl sm:text-5xl">
+                {group.title}
+              </h3>
+              <span className="label text-ink/45 pb-2">{group.items.length} ürün</span>
+            </div>
+            <div key={group.id} className="mt-8 grid grid-cols-2 gap-x-3 gap-y-7 sm:gap-x-5 sm:gap-y-9 xl:grid-cols-3">
+              {group.items.map((it, i) => (
+                <ItemTile key={it.label} item={it} index={i} />
+              ))}
             </div>
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
 
-// 2N-1 phases inside the groups stage: dwell on group 0, pan up, dwell on
-// group 1, pan up, ... dwell on group N-1. Each group's own dwell phase sits
-// at phaseIndex `groupIndex * 2`. Items (on both desktop and mobile) are
-// tapped rather than scrolled to, so dwell only needs to be a
-// deliberate-enough scroll distance that a stray wheel tick or swipe
-// doesn't blow straight through a group unnoticed — equal weights keep that
-// simple.
-const GROUP_PHASE_WEIGHTS = Array(serviceGroups.length * 2 - 1).fill(1);
-
-// Transit phases ease their own progress so the upward pan
-// accelerates/decelerates smoothly instead of moving at a harsh, constant
-// rate. The canvas transform below applies this offset with no CSS
-// transition of its own — the value is already a continuous function of
-// scroll (smoothed further upstream by the RAF lerp on the section's pin
-// progress), so a second, clock-based transition here would just make the
-// pan visibly chase a moving target instead of tracking the scroll gesture
-// directly.
-function groupCanvasOffset(phaseIndex, phaseLocal, height) {
-  const eased = easeInOutCubic(phaseLocal);
-  if (phaseIndex % 2 === 0) {
-    return { y: (phaseIndex / 2) * height };
-  }
-  const fromGroup = (phaseIndex - 1) / 2;
-  return { y: (fromGroup + eased) * height };
-}
-
-// Seeded from the current viewport instead of {0,0} so the pan canvas has a
-// correct size on the very first render — starting at {0,0} meant every
-// re-entry into this stage (it unmounts/remounts as scroll leaves and
-// re-enters the segment) rendered nothing at all until the measurement
-// effect caught up a frame later, showing a blank/frozen beat each time.
-function initialViewportSize() {
-  if (typeof window === "undefined") return { width: 0, height: 0 };
-  return { width: window.innerWidth, height: window.innerHeight };
-}
-
-function ServiceGroupsStage({ segmentLocal, opacity }) {
-  const viewportRef = useRef(null);
-  const [size, setSize] = useState(initialViewportSize);
-  const [activeItemIndex, setActiveItemIndex] = useState(0);
-  // Whether the user has ever tapped/selected an item, anywhere — once
-  // true, the first-group/first-item tap hint never needs to show again
-  // this visit.
-  const [hasTapped, setHasTapped] = useState(false);
-
-  useEffect(() => {
-    const el = viewportRef.current;
-    if (!el) return;
-    const measure = () => {
-      const rect = el.getBoundingClientRect();
-      setSize({ width: rect.width, height: rect.height });
-    };
-    measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  }, []);
-
-  const { index: phaseIndex, local: phaseLocal } = resolveWeightedSegment(segmentLocal, GROUP_PHASE_WEIGHTS);
-  const dwellGroupIndex = phaseIndex % 2 === 0 ? phaseIndex / 2 : undefined;
-
-  // Each newly-arrived group always starts fresh on its first item, rather
-  // than remembering whatever was last selected the previous time it was
-  // visited — one less thing for the user to have to make sense of.
-  useEffect(() => {
-    setActiveItemIndex(0);
-  }, [dwellGroupIndex]);
-
-  const handleSelectItem = (i) => {
-    setActiveItemIndex(i);
-    setHasTapped(true);
-  };
-
-  const { width, height } = size;
-  const offset = groupCanvasOffset(phaseIndex, phaseLocal, height);
-
-  return (
-    <div ref={viewportRef} className="absolute inset-0 overflow-hidden" style={{ opacity }}>
-      {width > 0 && height > 0 && (
-        <div
-          className="absolute top-0 left-0 w-full"
-          style={{
-            height: height * serviceGroups.length,
-            transform: `translateY(${-offset.y}px)`,
-          }}
-        >
-          {serviceGroups.map((group, i) => {
-            const isCurrentGroup = i === dwellGroupIndex;
-            return (
-              <div key={group.id} className="absolute left-0 w-full" style={{ height, top: i * height }}>
-                <ServiceGroupPanel
-                  group={group}
-                  isCurrentGroup={isCurrentGroup}
-                  activeItemIndex={isCurrentGroup ? activeItemIndex : 0}
-                  onSelectItem={handleSelectItem}
-                  showTapHint={i === 0 && isCurrentGroup && !hasTapped}
-                />
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Stage 3: "Çalışma Sürecimiz" timeline — dark theme, minimal markers
-// ---------------------------------------------------------------------------
-function ProcessHint({ p, side, reveal }) {
-  const rtl = side === "left";
-  return (
-    <div className={`flex items-center ${rtl ? "flex-row-reverse" : "flex-row"}`}>
-      <div className="h-px bg-[#F5A623]/50 flex-shrink-0" style={{ width: `${reveal * 26}px` }} />
-      <div className={`${rtl ? "text-right pr-3" : "text-left pl-3"} max-w-[200px] sm:max-w-[280px] md:max-w-[320px]`}>
-        <h4 className="relative inline-block font-display text-white font-bold text-lg sm:text-2xl md:text-[1.75rem] pb-1.5">
-          {p.title}
-          <span
-            className={`absolute bottom-0 h-px bg-[#F5A623] ${rtl ? "right-0" : "left-0"}`}
-            style={{ width: `${reveal * 100}%` }}
-          />
-        </h4>
-        <p className="text-white/65 text-sm sm:text-lg md:text-xl leading-snug mt-1">{p.desc}</p>
-      </div>
-    </div>
-  );
-}
-
-function ProcessMarker({ step, reveal }) {
-  return (
-    <div
-      className="relative z-10 flex-shrink-0 w-12 h-12 sm:w-16 sm:h-16 border-2 border-[#F5A623] bg-[#0D0D0D] text-white flex items-center justify-center font-display font-black text-lg sm:text-xl"
-      style={{ transform: `scale(${0.6 + reveal * 0.4})` }}
-    >
-      {step}
-    </div>
-  );
-}
-
-function Timeline({ localProgress }) {
-  const lineProgress = easeInOutCubic(clamp(localProgress / 0.85, 0, 1));
-  const groupOpacity = clamp(localProgress / 0.08, 0, 1);
-
-  return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center px-5 sm:px-6" style={{ opacity: groupOpacity }}>
-      <div className="text-center mb-8 sm:mb-12">
-        <span className="inline-block text-[#F5A623] text-xs font-bold tracking-widest uppercase mb-2">
-          Hizmetlerimiz
-        </span>
-        <h3 className="font-display text-2xl sm:text-3xl font-black text-white">
-          Çalışma <span className="text-[#F5A623]">Sürecimiz</span>
-        </h3>
       </div>
 
-      <div className="relative w-full max-w-[320px] sm:max-w-3xl">
-        <div className="absolute left-[24px] sm:left-1/2 sm:-translate-x-1/2 top-1 bottom-1 w-0.5 bg-white/15" />
-        <div
-          className="absolute left-[24px] sm:left-1/2 sm:-translate-x-1/2 top-1 w-0.5 bg-[#F5A623]"
-          style={{ height: `${lineProgress * 100}%` }}
-        />
-
-        <div className="flex flex-col gap-7 sm:gap-10">
-          {process.map((p, i) => {
-            const reveal = clamp((lineProgress - TIMELINE_THRESHOLDS[i] + 0.08) / 0.2, 0, 1);
-            const onRight = i % 2 === 1;
-            const fadeStyle = { opacity: reveal };
-
-            return (
-              <div key={i} className="relative flex items-center">
-                {/* Mobile: marker + hint pointing right, single left-aligned rail */}
-                <div className="sm:hidden flex items-center w-full">
-                  <ProcessMarker step={p.step} reveal={reveal} />
-                  <div style={fadeStyle}>
-                    <ProcessHint p={p} side="right" reveal={reveal} />
-                  </div>
-                </div>
-
-                {/* Desktop: zigzag hints either side of a centered rail */}
-                <div className="hidden sm:flex items-center flex-1 justify-end">
-                  {!onRight && (
-                    <div style={fadeStyle}>
-                      <ProcessHint p={p} side="left" reveal={reveal} />
-                    </div>
-                  )}
-                </div>
-                <div className="hidden sm:block">
-                  <ProcessMarker step={p.step} reveal={reveal} />
-                </div>
-                <div className="hidden sm:flex items-center flex-1 justify-start">
-                  {onRight && (
-                    <div style={fadeStyle}>
-                      <ProcessHint p={p} side="right" reveal={reveal} />
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+      {/* Process: scroll-driven street scene, full bleed */}
+      <div className="mx-auto max-w-7xl px-5 sm:px-8 mt-28 sm:mt-40">
+        <SectionHead index="02.1" label="Çalışma süreci" aside="Kaydırın · Fikirden montaja, dört adımda" />
       </div>
-    </div>
-  );
-}
+      <div className="mt-10">
+        <Process />
+      </div>
 
-// ---------------------------------------------------------------------------
-// Stage 4: closing call-to-action
-// ---------------------------------------------------------------------------
-function CTAStage({ opacity }) {
-  return (
-    <>
-      <div className="absolute inset-0 flex items-center justify-center px-5 sm:px-8" style={{ opacity }}>
-        <div className="max-w-2xl mx-auto text-center">
-          <h3 className="font-display text-3xl sm:text-4xl md:text-5xl font-black text-white leading-tight mb-5">
-            Markanızı daha <span className="text-[#F5A623]">görünür</span> hâle getirelim.
+      {/* CTA: full-bleed yellow sheet with registration marks in the corners */}
+      <div ref={ctaRef} className="relative border-b border-ink bg-brand">
+        {["top-4 left-4", "top-4 right-4", "bottom-4 left-4", "bottom-4 right-4"].map((pos) => (
+          <RegMark key={pos} className={`absolute ${pos} h-5 w-5 sm:h-6 sm:w-6 text-ink/70`} />
+        ))}
+        <div className="mx-auto max-w-7xl px-5 sm:px-8 py-20 sm:py-28 grid gap-10 lg:grid-cols-12 lg:items-end">
+          <h3 className="lg:col-span-8 display text-[2.2rem] sm:text-[3.8rem] lg:text-[4.9rem]">
+            Markanızı daha görünür hâle getirelim.
           </h3>
-          <p className="text-white/60 text-base sm:text-lg leading-relaxed max-w-xl mx-auto mb-9">
-            Projenizi anlatın, ihtiyacınıza özel tasarım ve üretim çözümünü birlikte oluşturalım.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <a
-              href="#iletisim"
-              className="group btn-neu w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#F5A623] hover:bg-white text-[#0D0D0D] font-bold text-sm sm:text-base px-7 py-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#0D0D0D]"
-            >
-              Teklif Al
-              <ArrowIcon className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
+          <div className="lg:col-span-4 flex flex-col gap-3">
+            <p className="mb-3 text-ink/75 leading-relaxed">
+              Projenizi anlatın, ihtiyacınıza özel tasarım ve üretim çözümünü birlikte oluşturalım.
+            </p>
+            <a href="#iletisim" onClick={go("iletisim")} className="btn btn-ink justify-between">
+              Teklif Al <ArrowIcon className="btn-arrow w-4 h-4" />
             </a>
-            <a
-              href="#referanslarimiz"
-              className="btn-neu w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#F8F8F8] hover:bg-white text-[#1A1A1A] font-bold text-sm sm:text-base px-7 py-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#0D0D0D]"
-            >
-              Projelerimizi İncele
+            <a href="#referanslarimiz" onClick={go("referanslarimiz")} className="btn btn-line justify-between">
+              Referanslarımızı Görün <ArrowIcon className="btn-arrow w-4 h-4" />
             </a>
           </div>
         </div>
       </div>
-      <ScrollHintChevrons opacity={opacity} />
-    </>
-  );
-}
-
-// Quick-jump "Teklif Al" pill, pinned to the corner of the card itself
-// (never the viewport) — only meaningful while browsing services or the
-// process timeline, where there's no other call-to-action on screen yet.
-// Positioned at the bottom-right corner; the site-wide WhatsAppButton is
-// fixed at the bottom-left corner on every screen, so the two never overlap.
-function FloatingOfferButton({ visible }) {
-  return (
-    // Wrapper owns the show/hide slide (a Tailwind translate-y utility —
-    // still a class-based transform, so it would just as easily lose to
-    // btn-neu's own transform on the same element); the inner <a> owns its
-    // independent hover tilt via btn-neu.
-    <div
-      className={`absolute bottom-24 right-5 sm:bottom-28 sm:right-8 z-40 transition-all duration-300 ${
-        visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3 pointer-events-none"
-      }`}
-    >
-      <a
-        href="#iletisim"
-        aria-hidden={!visible}
-        tabIndex={visible ? 0 : -1}
-        className="group btn-neu inline-flex items-center gap-2 bg-[#F5A623] hover:bg-white text-[#0D0D0D] font-bold text-sm px-5 py-3 sm:px-6 sm:py-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#0D0D0D]"
-      >
-        Teklif Al
-        <ArrowIcon className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
-      </a>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Four scroll stages: hero intro -> service groups -> process timeline -> CTA.
-// ---------------------------------------------------------------------------
-// The groups stage's weight controls only its own share of scroll —
-// intro/timeline/CTA keep their exact vh since each stage's absolute scroll
-// distance is weight * VH_PER_WEIGHT regardless of what the other weights
-// are. Items are tapped rather than scrolled to (on both desktop and
-// mobile), so that budget only needs to cover panning between the four
-// groups themselves (see GROUP_PHASE_WEIGHTS) — a small weight.
-const GROUPS_WEIGHT = 3;
-const VH_PER_WEIGHT = 160;
-
-export default function Services() {
-  const panelRef = useRef(null);
-  const [progress, setProgress] = useState(0);
-
-  const segmentWeights = [1, GROUPS_WEIGHT, 1.5, 1];
-  const totalWeight = segmentWeights.reduce((a, b) => a + b, 0);
-  // Extra scroll distance (beyond the one viewport the panel itself already
-  // occupies) the whole intro -> groups -> timeline -> CTA sequence needs —
-  // fed to usePinnedPanel as "virtual" content height (see About.jsx for the
-  // same pattern): there's no real overflowing DOM block, just a progress
-  // value driving which stage/item is shown.
-  const virtualExtraVh = totalWeight * VH_PER_WEIGHT;
-
-  usePinnedPanel(panelRef, { virtualExtraVh, onProgress: setProgress });
-
-  const { index: segmentIndex, local: segmentLocal } = resolveWeightedSegment(progress, segmentWeights);
-
-  const isIntro = segmentIndex === 0;
-  const isServiceGroups = segmentIndex === 1;
-  const isTimeline = segmentIndex === 2;
-  const isCTA = segmentIndex === 3;
-
-  const heroOpacity = stageOpacity(segmentLocal, { fadeIn: false, fadeOut: true });
-  // Arriving at the first group (Tabela) should light up quickly instead of
-  // sitting on a dark screen for a big chunk of scroll — a much shorter
-  // fade-in than the fade-out on the way to the timeline. fadeOutEdge is
-  // small on purpose: the last group (Matbaa) needs to stay fully visible
-  // for as much of its own dwell as possible, since that's the user's whole
-  // window to tap through its items before the pan away from it starts.
-  const groupsOpacity = stageOpacity(segmentLocal, { fadeIn: true, fadeOut: true, fadeInEdge: 0.03, fadeOutEdge: 0.04 });
-  const timelineOpacity = stageOpacity(segmentLocal, { fadeIn: false, fadeOut: true });
-  const ctaOpacity = stageOpacity(segmentLocal, { fadeIn: true, fadeOut: false });
-
-  const showFloatingCTA = isServiceGroups || isTimeline;
-
-  return (
-    <section
-      ref={panelRef}
-      id="hizmetlerimiz"
-      className="relative h-dvh pt-20 sm:pt-24 overflow-hidden bg-[#0D0D0D] flex items-center justify-center"
-    >
-      {/* Conic-gradient backdrop — purely decorative, never intercepts input */}
-      <div className="services-depth-bg pointer-events-none" />
-      {/* Dark scrim so the white foreground text stays legible over the
-          brighter, busier stripe pattern */}
-      <div className="absolute inset-0 bg-[#0D0D0D]/45 pointer-events-none" />
-
-      {isIntro && <HeroStage opacity={heroOpacity} />}
-
-      {isServiceGroups && (
-        <ServiceGroupsStage segmentLocal={segmentLocal} opacity={groupsOpacity} />
-      )}
-
-      {isTimeline && (
-        <div className="absolute inset-0" style={{ opacity: timelineOpacity }}>
-          <Timeline localProgress={segmentLocal} />
-        </div>
-      )}
-
-      {isCTA && <CTAStage opacity={ctaOpacity} />}
-
-      <FloatingOfferButton visible={showFloatingCTA} />
     </section>
   );
 }

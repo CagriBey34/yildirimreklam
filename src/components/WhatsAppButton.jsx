@@ -6,41 +6,23 @@ function WhatsAppIcon({ className }) {
   );
 }
 
-// Persistent WhatsApp shortcut — square neubrutalist badge (same .btn-neu
-// shell as every other button on the site: thick black border, hard offset
-// shadow, perspective pop on hover) rather than the usual circular WhatsApp
-// bubble, so it reads as part of this site's own design language instead of
-// a bolted-on third-party widget. `fixed` (not absolute, unlike the
-// section-scoped FloatingOfferButton in Services) so it stays anchored to
-// the viewport corner across every section, independent of the pinned-panel
-// scroll choreography.
+// Persistent WhatsApp shortcut: a soft round button that expands into a
+// pill with its label on hover/focus.
 export default function WhatsAppButton() {
   return (
-    // Positioning lives on this wrapper, not the <a> itself: .btn-neu's own
-    // `position: relative` (needed for its 3D tilt) is equal-specificity
-    // with and declared after Tailwind's `.fixed` utility, so it would win
-    // the cascade and silently demote the button to an in-flow element
-    // (which is why it only ever appeared down by the footer).
     <div className="fixed bottom-5 left-5 sm:bottom-8 sm:left-8 z-40">
       <a
         href="https://wa.me/905550087921?text=Merhaba%2C%20bilgi%20almak%20istiyorum."
         target="_blank"
         rel="noopener noreferrer"
         aria-label="WhatsApp'tan yazın"
-        className="btn-neu group flex items-center bg-[#25D366] hover:bg-[#20bd5a] text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#1A1A1A]"
+        className="group flex items-center rounded-full bg-[#25D366] text-white shadow-[0_18px_40px_-14px_rgba(37,211,102,0.6)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#25D366]"
       >
-        <span className="flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 flex-shrink-0">
-          <WhatsAppIcon className="w-7 h-7 sm:w-8 sm:h-8" />
+        <span className="flex items-center justify-center w-14 h-14 flex-shrink-0">
+          <WhatsAppIcon className="w-7 h-7" />
         </span>
-        {/* Collapsed to 0 width at rest; expands rightward on hover/focus to
-            reveal the label. Capped by max-width (not width) so it can
-            transition smoothly while still sizing to the text's natural
-            width once revealed, and it rides inside the same .btn-neu
-            border/shadow shell as the icon rather than getting its own. */}
-        <span className="max-w-0 group-hover:max-w-[230px] group-focus-visible:max-w-[230px] sm:group-hover:max-w-[260px] sm:group-focus-visible:max-w-[260px] overflow-hidden whitespace-nowrap transition-[max-width] duration-400 ease-[cubic-bezier(0.23,1,0.32,1)]">
-          <span className="flex items-center h-14 sm:h-16 bg-[#F5A623] text-[#1A1A1A] font-display font-bold text-sm sm:text-base pl-4 pr-5">
-            Bizimle İletişime Geçin
-          </span>
+        <span className="max-w-0 group-hover:max-w-[240px] group-focus-visible:max-w-[240px] overflow-hidden whitespace-nowrap transition-[max-width] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]">
+          <span className="block pr-6 font-bold text-sm">Bizimle İletişime Geçin</span>
         </span>
       </a>
     </div>

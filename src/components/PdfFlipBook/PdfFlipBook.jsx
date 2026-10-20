@@ -21,6 +21,14 @@ import { playPageFlipSound, preloadPageFlipSound } from "../../utils/pageFlipSou
 // BASE_URL öneki, site bir alt dizine kurulursa yolun bozulmaması için.
 pdfjs.GlobalWorkerOptions.workerSrc = `${import.meta.env.BASE_URL}pdf.worker.min.js`;
 
+// JPEG2000 çözücüsü ve renk profilleri (vite.config.js bunları public/pdfjs/
+// altına kopyalıyor). Olmadan JPX görselli sayfalar boş çiziliyor. Nesne modül
+// düzeyinde: <Document> `options` değişince PDF'i baştan yüklüyor.
+const PDF_OPTIONS = {
+  wasmUrl: `${import.meta.env.BASE_URL}pdfjs/wasm/`,
+  iccUrl: `${import.meta.env.BASE_URL}pdfjs/iccs/`,
+};
+
 // Çift sayfa (kitap gibi açık) görünüme ancak bu genişlikten sonra geçiliyor;
 // altında tek sayfa gösteriliyor, yoksa telefonda iki sayfa da okunamayacak
 // kadar küçülüyor.
@@ -286,6 +294,7 @@ export default function PdfFlipBook({ pdfUrl }) {
         // doğrudan bu kutuya ortalıyoruz.
         className="relative flex-1 min-h-0 flex flex-col"
         file={pdfUrl}
+        options={PDF_OPTIONS}
         onLoadSuccess={handleDocumentLoadSuccess}
         onLoadProgress={handleLoadProgress}
         loading={
@@ -360,9 +369,8 @@ export default function PdfFlipBook({ pdfUrl }) {
         </div>
       </Document>
 
-      {/* Kontroller sitenin geri kalanıyla aynı .btn-neu dilini kullanıyor:
-          kalın siyah kenarlık, sert ofset gölge, hover'da öne çıkan 3D eğim.
-          Gölgeler 6px (hover'da 11px) taştığı için aradaki boşluk buna göre. */}
+      {/* Kontroller sitenin yuvarlak .btn-icon dilini kullanıyor: yumuşak
+          gölge, hover'da hafif büyüme. */}
       {numPages > 0 && (
         <div className="shrink-0 flex items-center justify-center gap-3 px-4 py-4 sm:gap-4 sm:py-5">
           {/* İlk sayfa — dar ekranda gizli, sıkışmasın diye */}
@@ -370,7 +378,7 @@ export default function PdfFlipBook({ pdfUrl }) {
             type="button"
             onClick={goToFirstPage}
             aria-label="İlk sayfaya git"
-            className="btn-neu hidden sm:flex w-11 h-11 items-center justify-center bg-[#F8F8F8] hover:bg-white text-[#1A1A1A] focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            className="btn-icon hidden sm:flex w-11 h-11 items-center justify-center bg-[#F8F8F8] hover:bg-white text-[#1A1A1A] focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-5 h-5">
               <path d="M17 5l-7 7 7 7M7 5v14" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -381,16 +389,15 @@ export default function PdfFlipBook({ pdfUrl }) {
             type="button"
             onClick={flipPrev}
             aria-label="Önceki sayfa"
-            className="btn-neu flex w-11 h-11 items-center justify-center bg-[#F5A623] hover:bg-white text-[#1A1A1A] focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            className="btn-icon flex w-11 h-11 items-center justify-center bg-[#F5A623] hover:bg-white text-[#1A1A1A] focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-5 h-5">
               <path d="M15 5l-7 7 7 7" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
 
-          {/* Sayfa sayacı: tıklanabilir olmadığı için eğim/hover yok, ama
-              .contact-input alanlarıyla aynı kenarlık + sert gölge dili. */}
-          <span className="min-w-[96px] sm:min-w-[112px] border-[3px] border-black bg-[#F8F8F8] px-3 py-2 text-center font-display text-sm font-black text-[#1A1A1A] tabular-nums shadow-[4px_4px_0_#000]">
+          {/* Sayfa sayacı: tıklanabilir olmadığı için hover yok. */}
+          <span className="min-w-[96px] sm:min-w-[112px] rounded-full border border-white/10 bg-white/[0.06] px-4 py-2.5 text-center font-display text-sm font-bold text-paper tabular-nums">
             {currentPage} / {numPages}
           </span>
 
@@ -398,7 +405,7 @@ export default function PdfFlipBook({ pdfUrl }) {
             type="button"
             onClick={flipNext}
             aria-label="Sonraki sayfa"
-            className="btn-neu flex w-11 h-11 items-center justify-center bg-[#F5A623] hover:bg-white text-[#1A1A1A] focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            className="btn-icon flex w-11 h-11 items-center justify-center bg-[#F5A623] hover:bg-white text-[#1A1A1A] focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-5 h-5">
               <path d="M9 5l7 7-7 7" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -410,7 +417,7 @@ export default function PdfFlipBook({ pdfUrl }) {
             type="button"
             onClick={goToLastPage}
             aria-label="Son sayfaya git"
-            className="btn-neu hidden sm:flex w-11 h-11 items-center justify-center bg-[#F8F8F8] hover:bg-white text-[#1A1A1A] focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            className="btn-icon hidden sm:flex w-11 h-11 items-center justify-center bg-[#F8F8F8] hover:bg-white text-[#1A1A1A] focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-5 h-5">
               <path d="M7 5l7 7-7 7M17 5v14" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -423,7 +430,7 @@ export default function PdfFlipBook({ pdfUrl }) {
             aria-pressed={soundEnabled}
             aria-label={soundEnabled ? "Sayfa sesini kapat" : "Sayfa sesini aç"}
             title={soundEnabled ? "Sayfa sesi açık" : "Sayfa sesi kapalı"}
-            className={`btn-neu flex w-11 h-11 items-center justify-center hover:bg-white text-[#1A1A1A] focus:outline-none focus-visible:ring-2 focus-visible:ring-white ${
+            className={`btn-icon flex w-11 h-11 items-center justify-center hover:bg-white text-[#1A1A1A] focus:outline-none focus-visible:ring-2 focus-visible:ring-white ${
               soundEnabled ? "bg-[#F5A623]" : "bg-[#F8F8F8]"
             }`}
           >
@@ -448,7 +455,7 @@ export default function PdfFlipBook({ pdfUrl }) {
             aria-pressed={isFullscreen}
             aria-label={isFullscreen ? "Tam ekrandan çık" : "Tam ekran"}
             title={isFullscreen ? "Tam ekrandan çık" : "Tam ekran"}
-            className="btn-neu hidden sm:flex w-11 h-11 items-center justify-center bg-[#F8F8F8] hover:bg-white text-[#1A1A1A] focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            className="btn-icon hidden sm:flex w-11 h-11 items-center justify-center bg-[#F8F8F8] hover:bg-white text-[#1A1A1A] focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-5 h-5">
               {isFullscreen ? (

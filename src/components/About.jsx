@@ -1,6 +1,8 @@
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import { reasonIcons } from "../assets/icons";
-import { usePinnedPanel } from "../hooks/usePinnedPanel";
+import { useReveal } from "../lib/motion";
+import { ScrubText, SplitText } from "./ui/SplitText";
+import { ColorBar, SectionHead } from "./ui/Print";
 
 const reasons = [
   {
@@ -29,148 +31,80 @@ const reasons = [
   },
 ];
 
-function clamp(v, min, max) {
-  return Math.min(max, Math.max(min, v));
-}
+const specs = [
+  ["Uzmanlık", "Tabela · Dijital Baskı · Promosyon · Matbaa"],
+  ["Hizmet alanı", "Türkiye geneli"],
+  ["Çalışma saatleri", "Pzt – Cmt · 08:00 – 18:00"],
+  ["Süreç", "Keşif → Tasarım → Üretim → Montaj"],
+];
 
-function easeOutCubic(t) {
-  return 1 - Math.pow(1 - t, 3);
-}
-
-// One "Neden Biz?" intro segment, then one segment per reason.
-const SEGMENT_COUNT = reasons.length + 1;
-
-// How much extra scroll distance (in viewport-heights, beyond the one
-// viewport the panel itself already occupies) the internal reveal sequence
-// needs — fed to usePinnedPanel as "virtual" content height, since there's
-// no real overflowing DOM block here, just a progress value driving which
-// reason is shown.
-const VH_PER_SEGMENT = 90;
-const VIRTUAL_EXTRA_VH = SEGMENT_COUNT * VH_PER_SEGMENT;
-
-// Reason reveal: title, description and the watermark icon all arrive as
-// one synchronized block — a single eased fade/rise/soft-focus rather than
-// each piece running its own separate timeline (word-by-word title, then a
-// delayed description, then an independently-timed icon), which read as
-// fragmented instead of like one cohesive unit landing on screen. It fades
-// back out symmetrically before the next reason takes over, instead of
-// cutting instantly at the segment boundary, so the handoff between two
-// reasons reads as one continuous crossfade.
-const REVEAL_FRACTION = 0.3;
-const FADE_OUT_START = 0.75;
-function revealFor(segmentLocal) {
-  if (segmentLocal < REVEAL_FRACTION) return easeOutCubic(segmentLocal / REVEAL_FRACTION);
-  if (segmentLocal > FADE_OUT_START) {
-    return easeOutCubic(1 - (segmentLocal - FADE_OUT_START) / (1 - FADE_OUT_START));
-  }
-  return 1;
+// One cell of the ruled "Neden biz?" table. Cells share hairlines like a
+// spec sheet; hovering floods the cell yellow.
+function ReasonCell({ reason, index }) {
+  return (
+    <article className="group relative -mt-px -ml-px border border-ink/15 bg-paper p-6 sm:p-8 transition-colors duration-500 hover:bg-brand hover:z-[1]">
+      <div className="flex items-start justify-between gap-4">
+        <span className="label text-ink/45 group-hover:text-ink">R—0{index + 1}</span>
+        <img
+          src={reasonIcons[index]}
+          alt=""
+          loading="lazy"
+          className="h-20 w-20 sm:h-24 sm:w-24 object-contain mix-blend-multiply transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:-rotate-3 group-hover:scale-105"
+        />
+      </div>
+      <h3 className="mt-10 display text-2xl sm:text-[1.55rem] leading-[1.08]">{reason.title}</h3>
+      <p className="mt-3 max-w-[34ch] text-[0.95rem] leading-relaxed text-ink/65 group-hover:text-ink/80">{reason.desc}</p>
+    </article>
+  );
 }
 
 export default function About() {
-  const panelRef = useRef(null);
-  const [progress, setProgress] = useState(0);
-
-  usePinnedPanel(panelRef, { virtualExtraVh: VIRTUAL_EXTRA_VH, onProgress: setProgress });
-
-  const segmentSize = 1 / SEGMENT_COUNT;
-  const rawSegment = progress / segmentSize;
-  const segmentIndex = clamp(Math.floor(rawSegment), 0, SEGMENT_COUNT - 1);
-  const segmentLocal = clamp(rawSegment - segmentIndex, 0, 1);
-
-  const isIntro = segmentIndex === 0;
-
-  // Intro: blink for most of the segment, then fade out near the end.
-  const introFadeStart = 0.7;
-  const introOpacity = isIntro
-    ? segmentLocal < introFadeStart
-      ? 1
-      : clamp(1 - (segmentLocal - introFadeStart) / (1 - introFadeStart), 0, 1)
-    : 0;
-
-  // Reason item: title, description and icon all read off this single
-  // eased value instead of each running its own timeline.
-  const reasonIndex = segmentIndex - 1;
-  const reason = !isIntro ? reasons[reasonIndex] : null;
-
-  const reveal = revealFor(segmentLocal);
+  const specRef = useRef(null);
+  const gridRef = useRef(null);
+  useReveal(specRef, { stagger: true, y: 24 });
+  useReveal(gridRef, { stagger: true, y: 40 });
 
   return (
-    <section
-      ref={panelRef}
-      id="hakkimizda"
-      className="relative h-dvh pt-20 sm:pt-24 overflow-hidden bg-[#F8F8F8] flex items-center"
-    >
-      {/* "Neden Biz?" full-screen blinking headline */}
-      <div
-        className="absolute inset-0 flex items-center justify-center pointer-events-none px-4"
-        style={{ opacity: introOpacity }}
-      >
-        <h2 className="font-display blink-text text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-black text-[#1A1A1A] text-center tracking-tight">
-          Neden <span className="text-[#F5A623]">Biz?</span>
-        </h2>
-      </div>
+    <section id="hakkimizda" className="relative py-24 sm:py-36">
+      <div className="mx-auto max-w-7xl px-5 sm:px-8">
+        <SectionHead index="01" label="Hakkımızda" aside={<ColorBar />} />
 
-      {/* Scroll hint chevrons — pinned to the very bottom of the screen
-          (not tied to the headline's own centering) so they read as a
-          section-wide "keep scrolling" cue rather than part of the title. */}
-      <div
-        className="absolute inset-x-0 bottom-6 sm:bottom-8 flex flex-col items-center pointer-events-none"
-        style={{ opacity: introOpacity }}
-        aria-hidden="true"
-      >
-        {[0, 1, 2].map((i) => (
-          <svg
-            key={i}
-            viewBox="0 0 24 12"
-            className="w-6 sm:w-7 md:w-8 scroll-chevron"
-            style={{ marginTop: i === 0 ? 0 : "-0.4em", animationDelay: `${i * 0.6}s` }}
-          >
-            <path
-              d="M2 10L12 2L22 10"
-              fill="none"
-              stroke="#F5A623"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        ))}
-      </div>
+        <div className="mt-12 sm:mt-16 grid gap-12 lg:grid-cols-12 lg:gap-10">
+          <ScrubText
+            className="lg:col-span-8 text-[1.75rem] sm:text-[2.6rem] lg:text-[3.2rem] font-semibold leading-[1.2] tracking-[-0.012em]"
+            parts={[
+              { text: "Tabela, dijital baskı, promosyon ve matbaa alanlarında " },
+              { text: "yılların verdiği tecrübeyle", className: "mark" },
+              { text: " markanızı en iyi şekilde temsil ediyoruz." },
+            ]}
+          />
 
-      {/* Reasons: title + description on the left, a giant semi-transparent
-          watermark icon filling the right side — title, description and
-          icon all move as one rigid block, driven by the single `reveal`
-          value above, instead of each animating on its own schedule. */}
-      {reason && (
-        <div
-          className="absolute inset-0 flex items-center overflow-hidden"
-          style={{
-            opacity: reveal,
-            transform: `translateX(${(1 - reveal) * -56}px)`,
-            filter: `blur(${(1 - reveal) * 12}px)`,
-          }}
-        >
-          <div
-            className="hidden sm:flex absolute right-0 top-0 h-full w-[36%] items-center justify-center pointer-events-none"
-          >
-            <img
-              key={reasonIndex}
-              src={reasonIcons[reasonIndex]}
-              alt=""
-              className="w-[70%] h-[70%] object-contain"
-            />
-          </div>
-
-          <div className="relative z-10 w-full sm:w-[62%] pl-6 pr-6 sm:pl-12 sm:pr-0 md:pl-20">
-            <h2 className="font-display text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black text-[#1A1A1A] tracking-tight leading-[0.95] break-words">
-              {reason.title}
-            </h2>
-            <p className="mt-5 sm:mt-7 max-w-2xl text-xl sm:text-2xl md:text-3xl text-[#1A1A1A]/60 leading-snug">
-              {reason.desc}
-            </p>
-          </div>
+          <dl ref={specRef} className="lg:col-span-4 lg:pt-3 border-t border-ink/15">
+            {specs.map(([k, v]) => (
+              <div key={k} className="grid grid-cols-[8.5rem_1fr] gap-4 border-b border-ink/15 py-4">
+                <dt className="label text-ink/45 pt-0.5">{k}</dt>
+                <dd className="font-medium">{v}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
-      )}
+
+        <div className="mt-24 sm:mt-36 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
+          <SplitText
+            className="display text-[3.2rem] sm:text-[5.6rem] lg:text-[7rem]"
+            parts={[{ text: "Neden " }, { text: "biz?", className: "mark" }]}
+          />
+          <p className="max-w-xs text-ink/60 leading-relaxed sm:pb-4">
+            Fikirden montaja kadar her adımda yanınızdayız — bizi tercih etmeniz için altı sebep.
+          </p>
+        </div>
+
+        <div ref={gridRef} className="mt-10 sm:mt-14 grid pl-px pt-px sm:grid-cols-2 lg:grid-cols-3">
+          {reasons.map((r, i) => (
+            <ReasonCell key={r.title} reason={r} index={i} />
+          ))}
+        </div>
+      </div>
     </section>
   );
 }

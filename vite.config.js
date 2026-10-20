@@ -1,4 +1,4 @@
-import { copyFile, mkdir } from 'node:fs/promises'
+import { copyFile, cp, mkdir } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -33,6 +33,16 @@ function copyPdfWorker() {
 
       await mkdir(path.dirname(target), { recursive: true })
       await copyFile(source, target)
+
+      // JPEG2000 görsel çözücüsü (openjpeg) ve renk profilleri. PDF.js bunları
+      // `wasmUrl` / `iccUrl` üzerinden çalışma anında indiriyor; bu dosyalar
+      // olmadan JPX görselli sayfalar (ör. promosyon kataloğundaki ürün
+      // fotoğrafları) boş/gri çiziliyor. Worker'la aynı sürümde kalsınlar diye
+      // her build'de pdfjs-dist'ten kopyalanıyorlar.
+      const pdfjsRoot = path.dirname(require.resolve('pdfjs-dist/package.json'))
+      for (const dir of ['wasm', 'iccs']) {
+        await cp(path.join(pdfjsRoot, dir), path.join(projectRoot, 'public', 'pdfjs', dir), { recursive: true })
+      }
     },
   }
 }

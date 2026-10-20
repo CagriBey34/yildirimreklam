@@ -29,3 +29,4 @@ public/katalog/*.pdf
 
 # PDF.js worker — vite.config.js tarafından otomatik kopyalanıyor
 public/pdf.worker.min.js
+public/pdfjs/
