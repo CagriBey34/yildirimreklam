@@ -85,7 +85,7 @@ export default function Contact() {
   return (
     <section id="iletisim" className="relative py-24 sm:py-36">
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
-        <SectionHead index="05" label="İletişim" aside="Ücretsiz keşif · Fiyat teklifi" />
+        <SectionHead label="İletişim" aside="Ücretsiz keşif · Fiyat teklifi" />
 
         <div className="mt-12 sm:mt-16 grid gap-16 lg:grid-cols-12 lg:gap-10">
           <div className="lg:col-span-5">
@@ -123,13 +123,8 @@ export default function Contact() {
           </div>
 
           <div ref={formRef} className="lg:col-span-7 crop border border-ink/15 bg-sheet p-6 sm:p-10 lg:p-12">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 className="display text-3xl sm:text-4xl">Teklif formu</h3>
-                <p className="mt-2 text-sm text-ink/55">Formu doldurun, en kısa sürede size dönüş yapalım.</p>
-              </div>
-              <span className="label hidden sm:block text-ink/40 pt-2">F—01</span>
-            </div>
+            <h3 className="display text-3xl sm:text-4xl">Teklif formu</h3>
+            <p className="mt-2 text-sm text-ink/55">Formu doldurun, en kısa sürede size dönüş yapalım.</p>
 
             {sent && (
               <div role="status" className="mt-8 border border-ink bg-brand px-5 py-4 text-sm font-semibold">
@@ -172,10 +167,7 @@ export default function Contact() {
               title="Yıldırım Reklam Ajansı Konumu"
             />
           </div>
-          <figcaption className="label mt-3 flex justify-between text-ink/45">
-            <span>Atölye konumu</span>
-            <span>41.0782° N · 28.7811° E</span>
-          </figcaption>
+          <figcaption className="label mt-3 text-ink/45">Atölye konumu</figcaption>
         </figure>
       </div>
     </section>

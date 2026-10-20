@@ -43,8 +43,7 @@ const specs = [
 function ReasonCell({ reason, index }) {
   return (
     <article className="group relative -mt-px -ml-px border border-ink/15 bg-paper p-6 sm:p-8 transition-colors duration-500 hover:bg-brand hover:z-[1]">
-      <div className="flex items-start justify-between gap-4">
-        <span className="label text-ink/45 group-hover:text-ink">R—0{index + 1}</span>
+      <div className="flex items-start justify-end">
         <img
           src={reasonIcons[index]}
           alt=""
@@ -67,7 +66,7 @@ export default function About() {
   return (
     <section id="hakkimizda" className="relative py-24 sm:py-36">
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
-        <SectionHead index="01" label="Hakkımızda" aside={<ColorBar />} />
+        <SectionHead label="Hakkımızda" aside={<ColorBar />} />
 
         <div className="mt-12 sm:mt-16 grid gap-12 lg:grid-cols-12 lg:gap-10">
           <ScrubText

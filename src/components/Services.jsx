@@ -136,8 +136,6 @@ const serviceGroups = [
   },
 ];
 
-const pad2 = (n) => String(n).padStart(2, "0");
-
 function ArrowIcon({ className }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -169,9 +167,8 @@ function GroupIndex({ active, onSelect }) {
                   on ? "bg-ink text-paper border-ink" : "border-ink/15 hover:bg-paper-2"
                 }`}
               >
-                <span className={`label ${on ? "text-brand" : "text-ink/40"}`}>{pad2(i + 1)}</span>
                 <span className="display flex-1 whitespace-nowrap text-lg lg:text-[1.2rem]">{g.title}</span>
-                <span className={`label hidden lg:inline ${on ? "text-paper/55" : "text-ink/40"}`}>{pad2(g.items.length)}</span>
+                <span className={`label hidden lg:inline ${on ? "text-paper/55" : "text-ink/40"}`}>{g.items.length}</span>
               </button>
             </li>
           );
@@ -195,7 +192,6 @@ function ItemTile({ item, index }) {
       </div>
       <figcaption className="flex items-baseline justify-between gap-3 border-b border-ink/15 py-3">
         <span className="text-sm sm:text-base font-semibold leading-tight">{item.label}</span>
-        <span className="label text-ink/40">{pad2(index + 1)}</span>
       </figcaption>
     </figure>
   );
@@ -212,7 +208,7 @@ export default function Services() {
   return (
     <section id="hizmetlerimiz" className="relative border-t border-ink/10 bg-sheet pt-24 sm:pt-36">
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
-        <SectionHead index="02" label="Hizmetlerimiz" aside={`${serviceGroups.length} grup · ${total} ürün`} />
+        <SectionHead label="Hizmetlerimiz" aside={`${serviceGroups.length} grup · ${total} ürün`} />
 
         <div className="mt-12 sm:mt-16 grid gap-8 lg:grid-cols-12 lg:items-end">
           <SplitText
@@ -249,7 +245,7 @@ export default function Services() {
 
       {/* Process: scroll-driven street scene, full bleed */}
       <div className="mx-auto max-w-7xl px-5 sm:px-8 mt-28 sm:mt-40">
-        <SectionHead index="02.1" label="Çalışma süreci" aside="Kaydırın · Fikirden montaja, dört adımda" />
+        <SectionHead label="Çalışma süreci" aside="Kaydırın · Fikirden montaja, dört adımda" />
       </div>
       <div className="mt-10">
         <Process />

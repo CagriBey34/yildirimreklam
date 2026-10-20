@@ -104,15 +104,13 @@ function MenuSheet({ open, active, onNavigate }) {
 
       <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-5 pt-24 pb-6 sm:px-8 sm:pt-28">
         <div className="menu-fade label flex items-center justify-between border-b border-ink pb-3">
-          <span>
-            <span className="text-ink/50">(Menü)</span> Sayfa dizini
-          </span>
+          <span>Sayfa dizini</span>
           <ColorBar />
         </div>
 
         <nav aria-label="Menü" className="flex flex-1 flex-col justify-center py-4">
           <ol>
-            {navLinks.map((link, i) => {
+            {navLinks.map((link) => {
               const on = active === link.id;
               return (
                 <li key={link.id} className="menu-row border-b border-ink/25">
@@ -121,11 +119,8 @@ function MenuSheet({ open, active, onNavigate }) {
                     tabIndex={tab}
                     aria-current={on ? "true" : undefined}
                     onClick={(e) => onNavigate(e, link.id)}
-                    className="group grid grid-cols-[2.25rem_1fr_auto] items-center gap-3 px-1 py-[clamp(0.45rem,1.6vh,1.1rem)] transition-colors duration-300 hover:bg-ink hover:text-brand focus-visible:bg-ink focus-visible:text-brand focus-visible:outline-none sm:grid-cols-[3.5rem_1fr_auto] sm:gap-6 sm:px-3 lg:grid-cols-[3.5rem_1fr_auto_auto]"
+                    className="group grid grid-cols-[1fr_auto] items-center gap-3 px-1 py-[clamp(0.45rem,1.6vh,1.1rem)] transition-colors duration-300 hover:bg-ink hover:text-brand focus-visible:bg-ink focus-visible:text-brand focus-visible:outline-none sm:gap-6 sm:px-3 lg:grid-cols-[1fr_auto_auto]"
                   >
-                    <span className="label text-ink/50 group-hover:text-brand/70 group-focus-visible:text-brand/70">
-                      0{i + 1}
-                    </span>
                     <span className="display flex items-center gap-3 text-[clamp(1.1rem,min(5.4vh,5.8vw),3.6rem)] leading-[1.05] transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:translate-x-2">
                       {link.label}
                       {on && (

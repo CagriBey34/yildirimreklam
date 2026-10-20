@@ -89,7 +89,7 @@ export default function References() {
   return (
     <section id="referanslarimiz" className="relative border-t border-ink/10 bg-sheet py-16 sm:py-36">
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
-        <SectionHead index="04" label="Referanslarımız" aside={`${brands.length} marka · Türkiye geneli`} />
+        <SectionHead label="Referanslarımız" aside={`${brands.length} marka · Türkiye geneli`} />
 
         <div className="mt-8 sm:mt-16 grid gap-4 sm:gap-8 lg:grid-cols-12 lg:items-end">
           <SplitText

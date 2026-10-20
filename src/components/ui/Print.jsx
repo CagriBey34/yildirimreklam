@@ -22,14 +22,11 @@ export function ColorBar({ className = "" }) {
   );
 }
 
-// Ruled header row that opens every section: (index) label …… aside.
-export function SectionHead({ index, label, aside, dark = false }) {
+// Ruled header row that opens every section: label …… aside.
+export function SectionHead({ label, aside, dark = false }) {
   return (
     <div className={`label flex items-center justify-between gap-6 border-t pt-4 ${dark ? "border-paper/30" : "border-ink"}`}>
-      <span className="flex items-center gap-3">
-        <span className={dark ? "text-paper/45" : "text-ink/45"}>({index})</span>
-        <span>{label}</span>
-      </span>
+      <span>{label}</span>
       {aside && <span className={`hidden sm:flex items-center gap-3 ${dark ? "text-paper/45" : "text-ink/45"}`}>{aside}</span>}
     </div>
   );

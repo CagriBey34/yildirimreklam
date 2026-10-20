@@ -154,7 +154,7 @@ export default function Catalogs() {
     <>
       <section id="kataloglarimiz" className="relative py-24 sm:py-36">
         <div className="mx-auto max-w-7xl px-5 sm:px-8">
-          <SectionHead index="03" label="Kataloglarımız" aside={`${catalogs.length} katalog · PDF`} />
+          <SectionHead label="Kataloglarımız" aside={`${catalogs.length} katalog · PDF`} />
           <div className="mt-12 sm:mt-16 grid gap-8 lg:grid-cols-12 lg:items-end">
             <SplitText
               className="lg:col-span-8 display text-[2.3rem] sm:text-[4.2rem] lg:text-[5.4rem]"
